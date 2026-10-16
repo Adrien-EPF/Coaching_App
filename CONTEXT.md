@@ -16,14 +16,21 @@ One planned workout on a calendar day, made of **Exercises**.
 _Avoid_: Workout
 
 **Exercise**:
-A movement within a **Session** (e.g. weighted pull-up) with a prescribed number of **Sets**.
+A movement within a **Session** (e.g. weighted pull-up) with a prescribed number of **Sets** and one **Training Goal**. A bodyweight movement and its weighted version are two distinct Exercises (pull-up and weighted pull-up).
+
+**Training Goal**:
+The quality an **Exercise** is trained for in a **Program**: Strength, Endurance or Hypertrophy. It decides which set of **Rules** drives its **Recommendations** (rep ranges, RPE targets, how and when the weight goes up). The same movement can have a different Training Goal in another **Program** or **Session**. Hypertrophy here means building muscle to lift more, never training for looks.
+_Avoid_: Objective (reserved for a target **PR**), focus, type
 
 **Set**:
 One logged effort: weight, reps and RPE. Entered right after the **Exercise** in the gym.
 _Avoid_: Series (use Set)
 
+**RPE**:
+Rate of Perceived Exertion, logged on each **Set** from 1 to 10 (10 = no rep left, 9 = 1 left, 8 = 2 left...). The scale with its meaning is shown on screen when you enter it, so the note stays consistent. In the **Rules** it acts as a brake: reps hit at too high an RPE do not earn a weight increase.
+
 **Rules**:
-The progression rules you author: structured condition-to-action rules plus some free-text guidance.
+The progression rules you author, with one rule set per **Training Goal** (Strength, Endurance, Hypertrophy) plus shared rules that apply to all: structured condition-to-action rules plus some free-text guidance. Their single aim is performance (more weight, more reps), not appearance.
 
 **Recommendation**:
 The weight, reps and number of sets proposed for an **Exercise**, produced by Gemini guided by the **Rules** and your logged history, with an explanation. Always inside the **Guardrails**.

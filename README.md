@@ -29,5 +29,4 @@ Trend charts, volume and frequency objectives, rest timer, bodyweight tracking, 
 
 ## Still to provide
 
-- The Rules document.
 - The design document (for Claude Design).
