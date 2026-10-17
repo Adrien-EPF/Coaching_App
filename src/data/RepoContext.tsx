@@ -1,11 +1,13 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { appGemini } from "../config/appGemini";
 import { DEFAULT_RULES } from "../rules/rules";
+import type { Db } from "./db";
 import { openDatabase } from "./expoDb";
 import { Repo } from "./repo";
 
 interface Store {
   repo: Repo;
+  db: Db;
   /** Bumps after every write so screens reload. */
   version: number;
   changed: () => void;
@@ -15,18 +17,22 @@ const RepoContext = createContext<Store | null>(null);
 
 export function RepoProvider({ children, fallback }: { children: React.ReactNode; fallback: React.ReactNode }) {
   const [repo, setRepo] = useState<Repo | null>(null);
+  const [db, setDb] = useState<Db | null>(null);
   const [version, setVersion] = useState(0);
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    openDatabase().then((db) => setRepo(new Repo(db, DEFAULT_RULES, appGemini)), setError);
+    openDatabase().then((opened) => {
+      setDb(opened);
+      setRepo(new Repo(opened, DEFAULT_RULES, appGemini));
+    }, setError);
   }, []);
 
   const changed = useCallback(() => setVersion((v) => v + 1), []);
 
   if (error) throw error;
-  if (!repo) return <>{fallback}</>;
-  return <RepoContext.Provider value={{ repo, version, changed }}>{children}</RepoContext.Provider>;
+  if (!repo || !db) return <>{fallback}</>;
+  return <RepoContext.Provider value={{ repo, db, version, changed }}>{children}</RepoContext.Provider>;
 }
 
 export function useStore(): Store {

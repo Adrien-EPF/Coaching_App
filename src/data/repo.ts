@@ -4,10 +4,13 @@ import { addDays } from "../domain/dates";
 import { DEFAULT_RULES, Rules } from "../rules/rules";
 import { Db, first } from "./db";
 import type { Generate } from "../planner/gemini";
+import { adherence } from "../domain/adherence";
 import { Logbook } from "./logbook";
+import { Objectives } from "./objectives";
 import { Starting } from "./starting";
 
 export type { Estimate, NewExercise, StartingEntry } from "./starting";
+export type { NewObjective, Objective } from "./objectives";
 
 export type { ExerciseLogDetail, ExerciseProgress, ProblemReport, NumbersLogged, SessionLogDetail, SetLogDetail, StoredPlan } from "./logbook";
 
@@ -82,12 +85,15 @@ export class Repo {
 
   private starting: Starting;
 
+  private objectives: Objectives;
+
   /** `gemini` gives the call to plan with at each planning, or null when there is no key. */
   constructor(
     private db: Db,
     rules: Rules = DEFAULT_RULES,
     gemini: () => Promise<Generate | null> = async () => null,
   ) {
+    this.objectives = new Objectives(db);
     this.logbook = new Logbook(db, rules, this, gemini);
     this.starting = new Starting(db, rules, this, this.logbook, gemini);
   }
@@ -110,6 +116,19 @@ export class Repo {
   editValidatedSet: Logbook["editValidatedSet"] = (...a) => this.logbook.editValidatedSet(...a);
   reportProblem: Logbook["reportProblem"] = (...a) => this.logbook.reportProblem(...a);
   getProblemReports: Logbook["getProblemReports"] = (...a) => this.logbook.getProblemReports(...a);
+
+  // --- Objectives (see Objectives) ---
+  addObjective: Objectives["add"] = (...a) => this.objectives.add(...a);
+  removeObjective: Objectives["remove"] = (...a) => this.objectives.remove(...a);
+  getObjectives: Objectives["list"] = () => this.objectives.list();
+
+  /** Sessions done versus planned per month and year, from the Program's start to `today`. */
+  async getAdherence(today: IsoDate): Promise<ReturnType<typeof adherence>> {
+    const program = await this.getActiveProgram();
+    if (!program || program.startDate > today) return { months: [], years: [] };
+    const days = await this.getCalendar(program.startDate, today, today);
+    return adherence(days.flatMap((d) => d.items.flatMap((i) => (i.type === "planned" ? [{ date: d.date, status: i.status }] : []))));
+  }
 
   async createProgram(p: { name: string; cycle: CycleKind; startDate: IsoDate }): Promise<number> {
     const name = p.name.trim();

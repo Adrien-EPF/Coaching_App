@@ -238,3 +238,13 @@ export function ErrorText({ message }: { message: string | null }) {
     </Text>
   );
 }
+
+/** A thin lime bar filled to `pct` percent. */
+export function ProgressBar({ pct }: { pct: number }) {
+  const c = useColors();
+  return (
+    <View style={{ height: 8, borderRadius: radius.pill, backgroundColor: c.line }}>
+      <View style={{ height: 8, borderRadius: radius.pill, backgroundColor: c.lime, width: `${pct}%` }} />
+    </View>
+  );
+}

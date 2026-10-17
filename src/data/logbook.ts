@@ -4,6 +4,7 @@ import { Generate, planWithGemini } from "../planner/gemini";
 import { ExerciseInput, PastSession, SessionPlan, planSession } from "../planner/planner";
 import { BODYWEIGHT, GoalKey, Rules } from "../rules/rules";
 import { Db, first } from "./db";
+import { objectiveNote } from "./objectives";
 import type { Repo } from "./repo";
 
 export interface NumbersLogged {
@@ -345,7 +346,12 @@ export class Logbook {
       });
     }
     const reports = await this.getProblemReports(programSessionId, date);
-    const notes = reports.map((r) => `Problem Report: ${[r.kinds.join(", "), r.details].filter(Boolean).join(" — ")}`);
+    const inSession = new Set(exercises.map((e) => e.exerciseId));
+    const objectives = (await this.repo.getObjectives()).filter((o) => inSession.has(o.exerciseId));
+    const notes = [
+      ...reports.map((r) => `Problem Report: ${[r.kinds.join(", "), r.details].filter(Boolean).join(" — ")}`),
+      ...objectives.map(objectiveNote),
+    ];
     const input = { date, exercises: inputs, notes, problemReported: reports.length > 0 };
     const plan = withGemini ? await planWithGemini(this.rules, input, await this.gemini()) : planSession(this.rules, input);
     return this.storePlan(programSessionId, date, plan);

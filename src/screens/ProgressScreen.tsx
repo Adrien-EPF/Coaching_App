@@ -5,6 +5,8 @@ import type { ExerciseProgress } from "../data/repo";
 import { shortDate } from "../domain/format";
 import { Card, Chip, Row, Screen, Txt } from "../ui/kit";
 import { space, useColors } from "../ui/theme";
+import { AdherenceCard } from "./AdherenceCard";
+import { ObjectivesCard } from "./ObjectivesCard";
 
 const fmtKg = (n: number) => `${String(Math.round(n * 10) / 10).replace(".", ",")} kg`;
 
@@ -35,6 +37,8 @@ export function ProgressScreen() {
           <Txt kind="caption" muted>1RM estimé avec Epley, sur la charge soulevée uniquement.</Txt>
         </>
       )}
+      <ObjectivesCard />
+      <AdherenceCard />
     </Screen>
   );
 }

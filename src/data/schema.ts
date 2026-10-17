@@ -121,6 +121,16 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX problem_report_session ON problem_report(program_session_id, date);
   `,
+  `
+  -- A target PR on an Exercise (reps at a weight) to reach by a date.
+  CREATE TABLE objective (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    exercise_id INTEGER NOT NULL REFERENCES exercise(id) ON DELETE CASCADE,
+    reps INTEGER NOT NULL CHECK (reps > 0),
+    weight REAL NOT NULL CHECK (weight > 0),
+    by_date TEXT NOT NULL
+  );
+  `,
 ];
 
 export async function migrate(db: Db): Promise<void> {

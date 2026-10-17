@@ -1,8 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
-import { View } from "react-native";
+import { Share, View } from "react-native";
 import { clearGeminiKey, getGeminiKey, setGeminiKey } from "../config/geminiKey";
-import { Button, Card, ErrorText, Field, Row, Screen, Txt } from "../ui/kit";
+import { exportCsv, exportJson, importJson } from "../data/backup";
+import { useAction, useStore } from "../data/RepoContext";
+import { Button, Card, ErrorText, Field, Row, Screen, Sheet, Txt } from "../ui/kit";
 
 /** Réglages: the Gemini API key, kept on this device only. */
 export function SettingsScreen() {
@@ -54,6 +56,62 @@ export function SettingsScreen() {
           {saved ? <Button label="Supprimer la clé" kind="secondary" onPress={remove} /> : null}
         </Row>
       </View>
+      <DataCard />
     </Screen>
+  );
+}
+
+/** Données: everything lives on this phone, so export regularly and re-import a JSON to restore. */
+function DataCard() {
+  const { repo, db } = useStore();
+  const act = useAction();
+  const [importing, setImporting] = useState(false);
+  const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  const share = (make: () => Promise<string>, title: string) => async () => {
+    try {
+      setError(null);
+      await Share.share({ title, message: await make() });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const restore = async () => {
+    setDone(false);
+    const ok = await act(() => importJson(db, text), setError);
+    if (ok) {
+      setError(null);
+      setImporting(false);
+      setText("");
+      setDone(true);
+    }
+  };
+
+  return (
+    <>
+      <Card>
+        <Txt kind="heading">Données</Txt>
+        <Txt kind="caption" muted>
+          Tout reste sur ce téléphone. Exporte régulièrement : un téléphone perdu, c'est l'historique perdu.
+        </Txt>
+        <Row wrap={false}>
+          <Button label="Export JSON" kind="secondary" onPress={share(() => exportJson(db), "coaching-export.json")} />
+          <Button label="Export CSV" kind="secondary" onPress={share(() => exportCsv(db), "coaching-export.csv")} />
+        </Row>
+        <Button label="Importer un export JSON" kind="secondary" onPress={() => { setImporting(true); setDone(false); setError(null); }} />
+        {done ? <Txt kind="strong">Données restaurées.</Txt> : null}
+        <ErrorText message={error} />
+      </Card>
+      <Sheet visible={importing} title="Importer un export JSON" onClose={() => setImporting(false)}>
+        <Txt muted>Colle le contenu d'un export JSON. Il remplace toutes les données actuelles de cette application ; l'historique validé reste figé.</Txt>
+        <Field label="Contenu de l'export" value={text} onChangeText={setText} multiline autoCapitalize="none" autoCorrect={false} style={{ minHeight: 140, textAlignVertical: "top", paddingTop: 12 }} />
+        <ErrorText message={error} />
+        <Button label="Remplacer mes données" kind="danger" disabled={!text.trim()} onPress={restore} />
+        <Button label="Annuler" kind="secondary" onPress={() => setImporting(false)} />
+      </Sheet>
+    </>
   );
 }
