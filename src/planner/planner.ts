@@ -65,11 +65,15 @@ export interface PlanInput {
   exercises: ExerciseInput[];
   /** Problem Reports and the like: passed to Gemini only. */
   notes?: string[];
+  /** A Problem Report is on this Session: no Exercise goes up in weight, unless the Rules allow it. */
+  problemReported?: boolean;
 }
+
+const noIncrease = (rules: Rules, input: PlanInput) => !!input.problemReported && !rules.common.problem_report.allow_increase;
 
 /** Rules-only Session Plan: what the Rules say, then bounded by the Guardrails. */
 export function planSession(rules: Rules, input: PlanInput): SessionPlan {
-  const exercises = input.exercises.map((e) => ({ ...planExercise(rules, input.date, e), exerciseId: e.exerciseId }));
+  const exercises = input.exercises.map((e) => ({ ...planExercise(rules, input.date, e, noIncrease(rules, input)), exerciseId: e.exerciseId }));
   return { exercises, summary: summarize(input.exercises, exercises), source: "rules", note: null };
 }
 
@@ -82,7 +86,7 @@ export interface RawProposal {
 }
 
 /** Bounds any proposal by the Guardrails; the reason survives only if the weight really changed. */
-export function applyGuardrails(rules: Rules, date: IsoDate, ex: ExerciseInput, p: RawProposal): PlannedExercise {
+export function applyGuardrails(rules: Rules, date: IsoDate, ex: ExerciseInput, p: RawProposal, noIncrease = false): PlannedExercise {
   const bodyweight = ex.equipment === BODYWEIGHT;
   const base = ex.history.find((h) => logged(h).length > 0);
   const days = base ? diffDays(date, base.date) : 0;
@@ -95,6 +99,7 @@ export function applyGuardrails(rules: Rules, date: IsoDate, ex: ExerciseInput, 
     goal: ex.goal,
     longPause: !!pause && pause.decrease_pct > rules.guardrails.max_decrease_pct,
     exemptFromIncreaseCap: !!base && base.goal !== ex.goal && rules.special_cases.goal_change.exempt_from_max_increase,
+    noIncrease,
   };
   const weight = p.weight === null || bodyweight ? null : snap(equipment, p.weight, "nearest");
   return { ...finish(rules, ctx, { ...p, weight }), exerciseId: ex.exerciseId };
@@ -116,6 +121,8 @@ interface Context {
   longPause: boolean;
   /** A change of Training Goal is not capped on the way up. */
   exemptFromIncreaseCap: boolean;
+  /** A Problem Report is on the Session: the weight may stay or go down, never up. */
+  noIncrease: boolean;
 }
 
 const FALLBACK_EQUIPMENT: EquipmentRules = { min_step: 1 };
@@ -124,14 +131,14 @@ const epley = (weight: number, reps: number) => weight * (1 + reps / 30);
 const clean = (n: number) => Math.round(n * 1e6) / 1e6;
 const kg = (n: number) => `${String(clean(n)).replace(".", ",")} kg`;
 
-function planExercise(rules: Rules, date: IsoDate, ex: ExerciseInput): PlannedExercise {
+function planExercise(rules: Rules, date: IsoDate, ex: ExerciseInput, noIncrease: boolean): PlannedExercise {
   const bodyweight = ex.equipment === BODYWEIGHT;
   const equipment = rules.increments[ex.equipment] ?? FALLBACK_EQUIPMENT;
   const [bottom, top] = progressionWindow(rules, ex.goal);
 
   const base = ex.history.find((h) => logged(h).length > 0);
   const lastWeight = base ? workingWeight(base) : null;
-  const ctx: Context = { lastWeight, equipment, bodyweight, goal: ex.goal, longPause: false, exemptFromIncreaseCap: false };
+  const ctx: Context = { lastWeight, equipment, bodyweight, goal: ex.goal, longPause: false, exemptFromIncreaseCap: false, noIncrease };
 
   if (!base) {
     if (ex.start) {
@@ -218,6 +225,10 @@ function finish(rules: Rules, ctx: Context, p: Proposal): PlannedExercise {
   let { weight, reps, sets } = p;
 
   if (weight !== null && ctx.lastWeight !== null) {
+    if (ctx.noIncrease && weight > ctx.lastWeight) {
+      weight = ctx.lastWeight;
+      warnings.push("Pas de hausse : un problème est signalé sur cette séance.");
+    }
     const step = ctx.equipment.min_step;
     if (!ctx.exemptFromIncreaseCap) {
       const ceiling = snap(ctx.equipment, Math.max(clean(ctx.lastWeight * (1 + g.max_increase_pct / 100)), ctx.lastWeight + step), "down");

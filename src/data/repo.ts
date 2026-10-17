@@ -9,7 +9,7 @@ import { Starting } from "./starting";
 
 export type { Estimate, NewExercise, StartingEntry } from "./starting";
 
-export type { ExerciseLogDetail, NumbersLogged, SessionLogDetail, SetLogDetail, StoredPlan } from "./logbook";
+export type { ExerciseLogDetail, ExerciseProgress, ProblemReport, NumbersLogged, SessionLogDetail, SetLogDetail, StoredPlan } from "./logbook";
 
 export type TrainingGoal = "strength" | "endurance" | "hypertrophy";
 
@@ -106,6 +106,10 @@ export class Repo {
   setExerciseNotCompleted: Logbook["setExerciseNotCompleted"] = (...a) => this.logbook.setExerciseNotCompleted(...a);
   validateSession: Logbook["validateSession"] = (...a) => this.logbook.validateSession(...a);
   getPlan: Logbook["getPlan"] = (...a) => this.logbook.getPlan(...a);
+  getProgress: Logbook["getProgress"] = (...a) => this.logbook.getProgress(...a);
+  editValidatedSet: Logbook["editValidatedSet"] = (...a) => this.logbook.editValidatedSet(...a);
+  reportProblem: Logbook["reportProblem"] = (...a) => this.logbook.reportProblem(...a);
+  getProblemReports: Logbook["getProblemReports"] = (...a) => this.logbook.getProblemReports(...a);
 
   async createProgram(p: { name: string; cycle: CycleKind; startDate: IsoDate }): Promise<number> {
     const name = p.name.trim();

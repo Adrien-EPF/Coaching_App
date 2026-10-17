@@ -109,6 +109,18 @@ const MIGRATIONS: string[] = [
   -- A one-off Test Session only exists on its date; a normal Program Session repeats on its slot.
   ALTER TABLE program_session ADD COLUMN test_date TEXT;
   `,
+  `
+  -- A note on an upcoming Session (e.g. bad sleep), sent to Gemini when its plan is regenerated.
+  CREATE TABLE problem_report (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_session_id INTEGER NOT NULL REFERENCES program_session(id) ON DELETE CASCADE,
+    date TEXT NOT NULL,
+    kinds TEXT NOT NULL DEFAULT '[]',
+    details TEXT NOT NULL DEFAULT '',
+    created_at TEXT NOT NULL
+  );
+  CREATE INDEX problem_report_session ON problem_report(program_session_id, date);
+  `,
 ];
 
 export async function migrate(db: Db): Promise<void> {

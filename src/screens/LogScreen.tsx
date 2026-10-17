@@ -28,6 +28,7 @@ export function LogScreen() {
   const [editing, setEditing] = useState<{ exercise: ExerciseLogDetail; set: SetLogDetail } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
+  const [replanned, setReplanned] = useState<string | null>(null);
   const [validated, setValidated] = useState<StoredPlan | "none" | null>(null);
 
   useEffect(() => {
@@ -73,7 +74,8 @@ export function LogScreen() {
           {frozen && (
             <Card>
               <Txt kind="strong">Séance validée</Txt>
-              <Txt muted>Elle est figée : elle ne peut plus être modifiée.</Txt>
+              <Txt muted>Corriger une série replanifie la prochaine séance.</Txt>
+              {replanned ? <Txt kind="caption">{replanned}</Txt> : null}
             </Card>
           )}
           {log?.exercises.map((e) => (
@@ -101,6 +103,8 @@ export function LogScreen() {
 
       <SetSheet
         target={editing}
+        validated={frozen}
+        onReplanned={(plan) => setReplanned(plan ? `Prochaine séance replanifiée : ${longDate(plan.date)}. ${plan.summary}.` : null)}
         onClose={() => setEditing(null)}
       />
     </ScrollView>
@@ -142,20 +146,19 @@ function ExerciseCard({
         )}
       </View>
       {exercise.sets.map((s) => (
-        <SetRow key={s.id} set={s} bodyweight={bodyweight} frozen={frozen} onPress={() => onEdit(s)} />
+        <SetRow key={s.id} set={s} bodyweight={bodyweight} onPress={() => onEdit(s)} />
       ))}
     </Card>
   );
 }
 
-function SetRow({ set, bodyweight, frozen, onPress }: { set: SetLogDetail; bodyweight: boolean; frozen: boolean; onPress: () => void }) {
+function SetRow({ set, bodyweight, onPress }: { set: SetLogDetail; bodyweight: boolean; onPress: () => void }) {
   const c = useColors();
   const logged = set.reps !== null;
   const done = logged ? `${bodyweight ? "" : `${fmtKg(set.weight)} × `}${set.reps} · RPE ${String(set.rpe).replace(".", ",")}` : null;
   return (
     <Pressable
       accessibilityRole="button"
-      disabled={frozen}
       onPress={onPress}
       style={{
         flexDirection: "row",
@@ -195,7 +198,18 @@ function rpeMeaning(rpe: number): string {
 
 const RPE_CHOICES = [5, 6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 
-function SetSheet({ target, onClose }: { target: { exercise: ExerciseLogDetail; set: SetLogDetail } | null; onClose: () => void }) {
+function SetSheet({
+  target,
+  validated,
+  onReplanned,
+  onClose,
+}: {
+  target: { exercise: ExerciseLogDetail; set: SetLogDetail } | null;
+  /** The Session is validated: a change corrects history and re-plans the next Session. */
+  validated: boolean;
+  onReplanned: (plan: StoredPlan | null) => void;
+  onClose: () => void;
+}) {
   const { repo } = useStore();
   const act = useAction();
   const [weight, setWeight] = useState("");
@@ -220,8 +234,9 @@ function SetSheet({ target, onClose }: { target: { exercise: ExerciseLogDetail; 
 
   const save = async () => {
     if (rpe === null) return setError("Choisis le RPE.");
+    const numbers = { weight: bodyweight && weight.trim() === "" ? null : parseNumber(weight), reps: parseNumber(reps), rpe };
     const ok = await act(
-      () => repo.logSet(target.set.id, { weight: bodyweight && weight.trim() === "" ? null : parseNumber(weight), reps: parseNumber(reps), rpe }),
+      async () => (validated ? onReplanned(await repo.editValidatedSet(target.set.id, numbers, todayIso())) : repo.logSet(target.set.id, numbers)),
       setError,
     );
     if (ok) onClose();
@@ -251,13 +266,18 @@ function SetSheet({ target, onClose }: { target: { exercise: ExerciseLogDetail; 
       </View>
       <ErrorText message={error} />
       <Button label="Enregistrer" onPress={save} />
-      <Button
-        label={target.set.notCompleted ? "Remettre à saisir" : "Non faite"}
-        kind="secondary"
-        onPress={async () => {
-          if (await act(() => repo.setSetNotCompleted(target.set.id, !target.set.notCompleted), setError)) onClose();
-        }}
-      />
+      {validated && target.set.notCompleted ? null : (
+        <Button
+          label={target.set.notCompleted ? "Remettre à saisir" : "Non faite"}
+          kind="secondary"
+          onPress={async () => {
+            const run = validated
+              ? async () => onReplanned(await repo.editValidatedSet(target.set.id, "notCompleted", todayIso()))
+              : () => repo.setSetNotCompleted(target.set.id, !target.set.notCompleted);
+            if (await act(run, setError)) onClose();
+          }}
+        />
+      )}
     </Sheet>
   );
 }

@@ -1,24 +1,32 @@
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-import React from "react";
+import React, { useState } from "react";
 import { View } from "react-native";
 import { useQuery } from "../data/RepoContext";
-import { SessionExercise } from "../data/repo";
+import { SessionExercise, StoredPlan } from "../data/repo";
 import { addDays, todayIso } from "../domain/dates";
 import { longDate, plural } from "../domain/format";
 import type { RootParams } from "../navigation";
 import { Button, Card, Screen, Txt } from "../ui/kit";
 import { space } from "../ui/theme";
 import { GOAL_LABELS } from "./ProgramScreen";
+import { ProblemSheet } from "./ProblemSheet";
 
 export function TodayScreen() {
   const navigation = useNavigation<NavigationProp<RootParams>>();
   const today = todayIso();
+  const [reporting, setReporting] = useState(false);
   const plan = useQuery(async (repo) => {
     const days = await repo.getCalendar(today, addDays(today, 31), today);
     for (const day of days) {
       const item = day.items.find((i) => i.type === "planned" && i.status === "planned");
       if (item && item.type === "planned") {
-        return { date: day.date, item, exercises: await repo.getSessionExercises(item.sessionId) };
+        return {
+          date: day.date,
+          item,
+          exercises: await repo.getSessionExercises(item.sessionId),
+          stored: await repo.getPlan(item.sessionId),
+          reports: await repo.getProblemReports(item.sessionId, day.date),
+        };
       }
     }
     return null;
@@ -44,10 +52,22 @@ export function TodayScreen() {
           {plan.date <= today ? (
             <Button label="Commencer la séance" onPress={() => navigation.navigate("Log", { programSessionId: plan.item.sessionId, date: plan.date })} />
           ) : null}
-          <Txt kind="caps" muted>Plan de la séance</Txt>
-          {plan.exercises.map((e) => (
-            <ExerciseRow key={e.id} e={e} />
+          <Button label="Signaler un problème" kind="secondary" onPress={() => setReporting(true)} />
+          {plan.reports.map((r) => (
+            <Card key={r.id}>
+              <Txt kind="caps" muted>Problème signalé</Txt>
+              <Txt>{[r.kinds.join(", "), r.details].filter(Boolean).join(" · ")}</Txt>
+            </Card>
           ))}
+          <Txt kind="caps" muted>Plan de la séance</Txt>
+          {plan.stored?.note ? <Txt kind="caption" muted>{plan.stored.note}</Txt> : null}
+          {plan.exercises.map((e) => (
+            <ExerciseRow key={e.id} e={e} planned={plan.stored?.date === plan.date ? plan.stored.exercises.find((p) => p.exerciseId === e.exerciseId) : undefined} />
+          ))}
+          <ProblemSheet
+            target={reporting ? { programSessionId: plan.item.sessionId, name: plan.item.name, date: plan.date } : null}
+            onClose={() => setReporting(false)}
+          />
         </>
       )}
       {rest && rest.type !== "unplanned" && (
@@ -60,7 +80,7 @@ export function TodayScreen() {
   );
 }
 
-function ExerciseRow({ e }: { e: SessionExercise }) {
+function ExerciseRow({ e, planned }: { e: SessionExercise; planned?: StoredPlan["exercises"][number] }) {
   return (
     <Card>
       <View style={{ flexDirection: "row", gap: space[3] }}>
@@ -70,6 +90,15 @@ function ExerciseRow({ e }: { e: SessionExercise }) {
           <Txt kind="caption" muted>
             {plural(e.sets, "série", "séries")} · {GOAL_LABELS[e.goal]}
           </Txt>
+          {planned ? (
+            <Txt kind="caption">
+              Prévu : {planned.weight === null ? "" : `${String(planned.weight).replace(".", ",")} kg · `}
+              {planned.sets} × {planned.reps}
+            </Txt>
+          ) : null}
+          {planned?.warnings.map((w) => (
+            <Txt key={w} kind="caption" muted>{w}</Txt>
+          ))}
         </View>
       </View>
     </Card>

@@ -1,4 +1,5 @@
 import { addDays, IsoDate } from "../domain/dates";
+import { estimateOneRepMax, LiftedSet, PersonalRecord, personalRecords } from "../domain/records";
 import { Generate, planWithGemini } from "../planner/gemini";
 import { ExerciseInput, PastSession, SessionPlan, planSession } from "../planner/planner";
 import { BODYWEIGHT, GoalKey, Rules } from "../rules/rules";
@@ -63,6 +64,20 @@ export interface StoredPlan {
     reason: string | null;
     warnings: string[];
   }[];
+}
+
+export interface ProblemReport {
+  id: number;
+  /** Chosen from the Problem Report screen's list (bad sleep, pain...). */
+  kinds: string[];
+  details: string;
+}
+
+export interface ExerciseProgress {
+  exerciseId: number;
+  name: string;
+  records: PersonalRecord[];
+  estimatedOneRepMax: number;
 }
 
 interface SetRow {
@@ -159,14 +174,60 @@ export class Logbook {
     return { id: log.id, programSessionId: log.program_session_id, name: log.name, date: log.date, status: log.status, exercises, remaining };
   }
 
-  async logSet(setId: number, n: { weight: number | null; reps: number; rpe: number }): Promise<void> {
-    const row = await this.openSet(setId);
+  async logSet(setId: number, n: NumbersLogged): Promise<void> {
+    await this.writeSet(await this.openSet(setId), n);
+  }
+
+  private async writeSet(row: SetRow, n: NumbersLogged): Promise<void> {
     if (!Number.isInteger(n.reps) || n.reps < 1) throw new Error("Les reps doivent être un entier d'au moins 1.");
     if (!(n.rpe >= 1 && n.rpe <= 10) || n.rpe * 2 !== Math.round(n.rpe * 2)) throw new Error("Le RPE va de 1 à 10, par demi-point.");
     if (row.equipment !== BODYWEIGHT && (n.weight === null || !Number.isFinite(n.weight) || n.weight < 0)) {
       throw new Error("Indique la charge.");
     }
-    await this.db.run("UPDATE set_log SET weight = ?, reps = ?, rpe = ?, not_completed = 0 WHERE id = ?", [n.weight, n.reps, n.rpe, setId]);
+    await this.db.run("UPDATE set_log SET weight = ?, reps = ?, rpe = ?, not_completed = 0 WHERE id = ?", [n.weight, n.reps, n.rpe, row.id]);
+  }
+
+  /** Corrects a Set of a validated Session, then re-plans the next Session from the corrected history. */
+  async editValidatedSet(setId: number, edit: NumbersLogged | "notCompleted", today: IsoDate): Promise<StoredPlan | null> {
+    const row = await first<SetRow>(this.db, `${SET_SELECT} WHERE s.id = ?`, [setId]);
+    if (!row) throw new Error("Série introuvable.");
+    const log = await first<{ status: string; date: IsoDate }>(this.db, "SELECT status, date FROM session_log WHERE id = ?", [row.session_log_id]);
+    if (log?.status !== "validated") throw new Error("Cette séance n'est pas validée : saisis la série directement.");
+    if (edit === "notCompleted") {
+      await this.db.run("UPDATE set_log SET not_completed = 1, weight = NULL, reps = NULL, rpe = NULL WHERE id = ?", [setId]);
+    } else {
+      await this.writeSet(row, edit);
+    }
+    return this.planNext(log.date, today);
+  }
+
+  // --- Problem Reports ---
+
+  /** Attaches a Problem Report to an upcoming Session and regenerates its Session Plan with the note. */
+  async reportProblem(programSessionId: number, date: IsoDate, report: { kinds: string[]; details: string }): Promise<StoredPlan | null> {
+    const details = report.details.trim();
+    if (report.kinds.length === 0 && !details) throw new Error("Choisis ce qui ne va pas ou précise le problème.");
+    const done = await first<{ id: number }>(this.db, "SELECT id FROM session_log WHERE program_session_id = ? AND date = ? AND status = 'validated'", [
+      programSessionId,
+      date,
+    ]);
+    if (done) throw new Error("Cette séance est déjà validée : un problème ne peut plus y être signalé.");
+    await this.db.run("INSERT INTO problem_report (program_session_id, date, kinds, details, created_at) VALUES (?, ?, ?, ?, ?)", [
+      programSessionId,
+      date,
+      JSON.stringify(report.kinds),
+      details,
+      new Date().toISOString(),
+    ]);
+    return this.planSessionOn(programSessionId, date);
+  }
+
+  async getProblemReports(programSessionId: number, date: IsoDate): Promise<ProblemReport[]> {
+    const rows = await this.db.all<{ id: number; kinds: string; details: string }>(
+      "SELECT id, kinds, details FROM problem_report WHERE program_session_id = ? AND date = ? ORDER BY id",
+      [programSessionId, date],
+    );
+    return rows.map((r) => ({ id: r.id, kinds: JSON.parse(r.kinds) as string[], details: r.details }));
   }
 
   /** Marks a Set Not Completed (forgetting its numbers), or puts it back to be logged. */
@@ -229,6 +290,30 @@ export class Logbook {
     };
   }
 
+  // --- Personal Records and Estimated 1RM ---
+
+  /** Per Exercise with a lifted load: its PRs and Estimated 1RM, from validated Sessions only. */
+  async getProgress(): Promise<ExerciseProgress[]> {
+    const rows = await this.db.all<{ exercise_id: number; name: string; weight: number; reps: number; date: IsoDate }>(
+      `SELECT s.exercise_id, e.name, s.weight, s.reps, sl.date
+         FROM set_log s JOIN session_log sl ON sl.id = s.session_log_id JOIN exercise e ON e.id = s.exercise_id
+        WHERE sl.status = 'validated' AND s.not_completed = 0 AND s.reps IS NOT NULL AND s.weight > 0
+        ORDER BY e.name, s.exercise_id`,
+    );
+    const byExercise = new Map<number, { name: string; sets: LiftedSet[] }>();
+    for (const r of rows) {
+      const entry = byExercise.get(r.exercise_id) ?? { name: r.name, sets: [] };
+      entry.sets.push({ weight: r.weight, reps: r.reps, date: r.date });
+      byExercise.set(r.exercise_id, entry);
+    }
+    return [...byExercise].map(([exerciseId, { name, sets }]) => ({
+      exerciseId,
+      name,
+      records: personalRecords(sets),
+      estimatedOneRepMax: Math.max(...sets.map((s) => estimateOneRepMax(s.weight, s.reps))),
+    }));
+  }
+
   // --- planning ---
 
   private async planNext(after: IsoDate, today: IsoDate): Promise<StoredPlan | null> {
@@ -259,7 +344,9 @@ export class Logbook {
         start,
       });
     }
-    const input = { date, exercises: inputs };
+    const reports = await this.getProblemReports(programSessionId, date);
+    const notes = reports.map((r) => `Problem Report: ${[r.kinds.join(", "), r.details].filter(Boolean).join(" — ")}`);
+    const input = { date, exercises: inputs, notes, problemReported: reports.length > 0 };
     const plan = withGemini ? await planWithGemini(this.rules, input, await this.gemini()) : planSession(this.rules, input);
     return this.storePlan(programSessionId, date, plan);
   }
