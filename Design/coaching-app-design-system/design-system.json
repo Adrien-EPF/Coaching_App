@@ -1,0 +1,79 @@
+{
+  "v": 3,
+  "assetGroups": {
+    "Logos": {
+      "name": "Logos",
+      "tile": "l",
+      "order": [
+        "coaching-app-mark.svg",
+        "coaching-app-mark-lime.svg",
+        "coaching-app-icon.svg",
+        "coaching-app-lockup.svg",
+        "coaching-app-lockup-inverse.svg"
+      ],
+      "files": {
+        "coaching-app-mark.svg": {
+          "name": "coaching-app-mark.svg",
+          "blob": "40a993d82cb064ff1f3c43d2493b6fd8",
+          "size": 728,
+          "type": "image/svg+xml"
+        },
+        "coaching-app-mark-lime.svg": {
+          "name": "coaching-app-mark-lime.svg",
+          "blob": "963e5196a6b6d27b9dfd6991840c4b2d",
+          "size": 728,
+          "type": "image/svg+xml"
+        },
+        "coaching-app-icon.svg": {
+          "name": "coaching-app-icon.svg",
+          "blob": "a7320198221aaf6397d319a20f0aefb0",
+          "size": 839,
+          "type": "image/svg+xml"
+        },
+        "coaching-app-lockup.svg": {
+          "name": "coaching-app-lockup.svg",
+          "blob": "ade856d6961fd8f4824863b5eafa4ac9",
+          "size": 9984,
+          "type": "image/svg+xml"
+        },
+        "coaching-app-lockup-inverse.svg": {
+          "name": "coaching-app-lockup-inverse.svg",
+          "blob": "dccc5cc1023df444d72cb5872acf902f",
+          "size": 9984,
+          "type": "image/svg+xml"
+        }
+      }
+    }
+  },
+  "blobs": {},
+  "createdOnFiles": {
+    "at": "2026-10-16T14:50:00Z",
+    "v": 1
+  },
+  "docs": {
+    "sections": []
+  },
+  "groups": [
+    "Logos"
+  ],
+  "lastChange": {
+    "by": "Adrien",
+    "at": "2026-10-16T15:00:00Z",
+    "via": "Claude",
+    "note": "Logo ajouté : chevrons + haltère (symbole, version lime, icône d'app, logotypes clair et inversé)."
+  },
+  "layout": "files",
+  "libraries": [
+    {
+      "name": "react",
+      "version": "18"
+    },
+    {
+      "name": "react-dom",
+      "version": "18"
+    }
+  ],
+  "namespace": "Coach",
+  "sections": {},
+  "title": "Coaching App"
+}
