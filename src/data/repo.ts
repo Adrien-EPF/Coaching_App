@@ -3,7 +3,11 @@ import { IsoDate } from "../domain/dates";
 import { addDays } from "../domain/dates";
 import { DEFAULT_RULES, Rules } from "../rules/rules";
 import { Db, first } from "./db";
+import type { Generate } from "../planner/gemini";
 import { Logbook } from "./logbook";
+import { Starting } from "./starting";
+
+export type { Estimate, NewExercise, StartingEntry } from "./starting";
 
 export type { ExerciseLogDetail, NumbersLogged, SessionLogDetail, SetLogDetail, StoredPlan } from "./logbook";
 
@@ -76,12 +80,23 @@ const toProgram = (r: ProgramRow): Program => ({ id: r.id, name: r.name, cycle: 
 export class Repo {
   private logbook: Logbook;
 
+  private starting: Starting;
+
+  /** `gemini` gives the call to plan with at each planning, or null when there is no key. */
   constructor(
     private db: Db,
     rules: Rules = DEFAULT_RULES,
+    gemini: () => Promise<Generate | null> = async () => null,
   ) {
-    this.logbook = new Logbook(db, rules, this);
+    this.logbook = new Logbook(db, rules, this, gemini);
+    this.starting = new Starting(db, rules, this, this.logbook, gemini);
   }
+
+  // --- Where a Program starts: Initial Weights, Starting Estimates, Test Session (see Starting) ---
+  exercisesWithoutHistory: Starting["exercisesWithoutHistory"] = (...a) => this.starting.exercisesWithoutHistory(...a);
+  setStartingWeights: Starting["setStartingWeights"] = (...a) => this.starting.setStartingWeights(...a);
+  proposeEstimates: Starting["proposeEstimates"] = (...a) => this.starting.proposeEstimates(...a);
+  createTestSession: Starting["createTestSession"] = (...a) => this.starting.createTestSession(...a);
 
   // --- Session logging, Validation and planning (see Logbook) ---
   startSession: Logbook["startSession"] = (...a) => this.logbook.startSession(...a);
@@ -199,7 +214,7 @@ export class Repo {
     const row = await first<ProgramRow>(this.db, "SELECT * FROM program WHERE id = ?", [programId]);
     if (!row) throw new Error("Programme introuvable.");
     const sessions = await this.db.all<{ id: number; program_id: number; name: string; slot: number }>(
-      "SELECT * FROM program_session WHERE program_id = ? ORDER BY slot, id",
+      "SELECT * FROM program_session WHERE program_id = ? AND test_date IS NULL ORDER BY slot, id",
       [programId],
     );
     return {
@@ -278,8 +293,8 @@ export class Repo {
 
     const program = await this.getActiveProgram();
     if (program) {
-      const sessions = await this.db.all<{ id: number; name: string; slot: number; exercises: number; sets: number | null }>(
-        `SELECT ps.id, ps.name, ps.slot, COUNT(se.id) AS exercises, SUM(se.sets) AS sets
+      const sessions = await this.db.all<{ id: number; name: string; slot: number; test_date: IsoDate | null; exercises: number; sets: number | null }>(
+        `SELECT ps.id, ps.name, ps.slot, ps.test_date, COUNT(se.id) AS exercises, SUM(se.sets) AS sets
            FROM program_session ps LEFT JOIN session_exercise se ON se.program_session_id = ps.id
           WHERE ps.program_id = ? GROUP BY ps.id ORDER BY ps.slot, ps.id`,
         [program.id],
@@ -303,7 +318,9 @@ export class Repo {
 
       for (const s of sessions) {
         const common = { type: "planned" as const, sessionId: s.id, name: s.name, exerciseCount: s.exercises, setCount: s.sets ?? 0 };
-        for (const date of datesForSlot(program.cycle, program.startDate, s.slot, from, to)) {
+        // A Test Session is one-off: only its own date.
+        const dates = s.test_date ? (s.test_date >= from && s.test_date <= to ? [s.test_date] : []) : datesForSlot(program.cycle, program.startDate, s.slot, from, to);
+        for (const date of dates) {
           const o = byKey.get(`${s.id}|${date}`);
           const status: PlannedStatus = done.has(`${s.id}|${date}`) ? "done" : o ? o.status : statusOn(s.id, date, "planned");
           days.get(date)!.push({ ...common, status, plannedDate: date, ...(o?.moved_to ? { movedTo: o.moved_to } : {}) });

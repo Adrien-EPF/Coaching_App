@@ -1,4 +1,5 @@
 import { addDays, IsoDate } from "../domain/dates";
+import { Generate, planWithGemini } from "../planner/gemini";
 import { ExerciseInput, PastSession, SessionPlan, planSession } from "../planner/planner";
 import { BODYWEIGHT, GoalKey, Rules } from "../rules/rules";
 import { Db, first } from "./db";
@@ -50,7 +51,9 @@ export interface StoredPlan {
   /** The day the planned Session is due. */
   date: IsoDate;
   summary: string;
-  source: SessionPlan["source"] | "gemini";
+  source: SessionPlan["source"];
+  /** Set when the plan is not the one expected, e.g. Gemini was unavailable so the Rules alone planned it. */
+  note: string | null;
   exercises: {
     exerciseId: number;
     name: string;
@@ -87,6 +90,8 @@ export class Logbook {
     private db: Db,
     private rules: Rules,
     private repo: Repo,
+    /** The Gemini call to plan with, or null when there is no key. Asked at each planning. */
+    private gemini: () => Promise<Generate | null> = async () => null,
   ) {}
 
   /** Opens the log for a Program Session on a date (or returns the one already open), pre-filled from its Session Plan. */
@@ -194,9 +199,9 @@ export class Logbook {
   }
 
   async getPlan(programSessionId: number): Promise<StoredPlan | null> {
-    const head = await first<{ date: IsoDate; summary: string; source: StoredPlan["source"] }>(
+    const head = await first<{ date: IsoDate; summary: string; source: StoredPlan["source"]; note: string | null }>(
       this.db,
-      "SELECT date, summary, source FROM session_plan WHERE program_session_id = ?",
+      "SELECT date, summary, source, note FROM session_plan WHERE program_session_id = ?",
       [programSessionId],
     );
     if (!head) return null;
@@ -211,6 +216,7 @@ export class Logbook {
       date: head.date,
       summary: head.summary,
       source: head.source,
+      note: head.note,
       exercises: rows.map((r) => ({
         exerciseId: r.exercise_id,
         name: r.name,
@@ -235,11 +241,13 @@ export class Logbook {
     return null;
   }
 
-  private async planSessionOn(programSessionId: number, date: IsoDate): Promise<StoredPlan | null> {
+  /** Plans a Program Session due on a date and stores the plan. `withGemini` false: the Rules alone. */
+  async planSessionOn(programSessionId: number, date: IsoDate, withGemini = true): Promise<StoredPlan | null> {
     const exercises = await this.repo.getSessionExercises(programSessionId);
     if (exercises.length === 0) return null;
     const inputs: ExerciseInput[] = [];
     for (const e of exercises) {
+      const start = await first<{ weight: number | null; reps: number }>(this.db, "SELECT weight, reps FROM starting_weight WHERE exercise_id = ?", [e.exerciseId]);
       inputs.push({
         exerciseId: e.exerciseId,
         name: e.name,
@@ -248,16 +256,23 @@ export class Logbook {
         goal: e.goal,
         equipment: e.equipment,
         history: await this.history(e.exerciseId, 6),
+        start,
       });
     }
-    const plan = planSession(this.rules, { date, exercises: inputs });
+    const input = { date, exercises: inputs };
+    const plan = withGemini ? await planWithGemini(this.rules, input, await this.gemini()) : planSession(this.rules, input);
+    return this.storePlan(programSessionId, date, plan);
+  }
 
+  /** Replaces the stored Session Plan of a Program Session. */
+  async storePlan(programSessionId: number, date: IsoDate, plan: SessionPlan): Promise<StoredPlan | null> {
     await this.db.run("DELETE FROM session_plan WHERE program_session_id = ?", [programSessionId]);
-    await this.db.run("INSERT INTO session_plan (program_session_id, date, summary, source) VALUES (?, ?, ?, ?)", [
+    await this.db.run("INSERT INTO session_plan (program_session_id, date, summary, source, note) VALUES (?, ?, ?, ?, ?)", [
       programSessionId,
       date,
       plan.summary,
       plan.source,
+      plan.note,
     ]);
     for (const p of plan.exercises) {
       await this.db.run(
@@ -269,7 +284,7 @@ export class Logbook {
   }
 
   /** The last validated Sessions of an Exercise, newest first. */
-  private async history(exerciseId: number, limit: number): Promise<PastSession[]> {
+  async history(exerciseId: number, limit: number): Promise<PastSession[]> {
     const logs = await this.db.all<{ id: number; date: IsoDate }>(
       `SELECT DISTINCT sl.id, sl.date FROM set_log s JOIN session_log sl ON sl.id = s.session_log_id
         WHERE s.exercise_id = ? AND sl.status = 'validated' ORDER BY sl.date DESC, sl.id DESC LIMIT ?`,

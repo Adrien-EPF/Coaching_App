@@ -5,6 +5,7 @@ import { ProgramDetail, SessionExercise, TrainingGoal } from "../data/repo";
 import { CYCLE_LABELS, CycleKind, slotCount, slotLabel } from "../domain/cycle";
 import { todayIso } from "../domain/dates";
 import { isIsoDate, plural, shortDate } from "../domain/format";
+import { StartingSheet } from "./StartingSheet";
 import { Button, Card, Chip, ErrorText, Field, Row, Screen, Sheet, Txt } from "../ui/kit";
 import { space, useColors } from "../ui/theme";
 
@@ -28,8 +29,13 @@ export function ProgramScreen() {
     const p = await repo.getActiveProgram();
     return p ? repo.getProgramDetail(p.id) : null;
   });
+  const fresh = useQuery(async (repo) => {
+    const p = await repo.getActiveProgram();
+    return p ? repo.exercisesWithoutHistory(p.id) : [];
+  });
   const [sheet, setSheet] = useState<
     | { kind: "program" }
+    | { kind: "starting" }
     | { kind: "session" }
     | { kind: "exercise"; sessionId: number }
     | { kind: "editExercise"; exercise: SessionExercise }
@@ -56,6 +62,16 @@ export function ProgramScreen() {
             </Row>
           </Card>
 
+          {fresh && fresh.length > 0 && (
+            <Card>
+              <Txt kind="heading">Charges de départ</Txt>
+              <Txt muted>
+                {plural(fresh.length, "exercice sans historique", "exercices sans historique")} : {fresh.map((e) => e.name).join(", ")}.
+              </Txt>
+              <Button label="Fixer les charges de départ" onPress={() => setSheet({ kind: "starting" })} />
+            </Card>
+          )}
+
           <Txt kind="caps" muted>Séances</Txt>
           {detail.sessions.length === 0 && <Txt muted>Aucune séance. Ajoute la première.</Txt>}
           {detail.sessions.map((s) => (
@@ -80,6 +96,7 @@ export function ProgramScreen() {
       )}
       <Button label="Nouveau programme" kind={detail ? "secondary" : "primary"} onPress={() => setSheet({ kind: "program" })} />
 
+      <StartingSheet visible={sheet?.kind === "starting"} onClose={close} exercises={fresh ?? []} />
       <ProgramSheet visible={sheet?.kind === "program"} onClose={close} />
       {detail && (
         <>

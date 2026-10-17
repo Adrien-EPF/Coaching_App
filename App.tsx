@@ -19,6 +19,7 @@ import { LogScreen } from "./src/screens/LogScreen";
 import { CalendarScreen } from "./src/screens/CalendarScreen";
 import { ProgramScreen } from "./src/screens/ProgramScreen";
 import { ProgressScreen } from "./src/screens/ProgressScreen";
+import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { TodayScreen } from "./src/screens/TodayScreen";
 import { fonts, useColors, useIsDark } from "./src/ui/theme";
 
@@ -65,6 +66,7 @@ function Root() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Tabs" component={Tabs} />
         <Stack.Screen name="Log" component={LogScreen} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

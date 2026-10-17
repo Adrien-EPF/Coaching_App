@@ -1,4 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { appGemini } from "../config/appGemini";
+import { DEFAULT_RULES } from "../rules/rules";
 import { openDatabase } from "./expoDb";
 import { Repo } from "./repo";
 
@@ -17,7 +19,7 @@ export function RepoProvider({ children, fallback }: { children: React.ReactNode
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    openDatabase().then((db) => setRepo(new Repo(db)), setError);
+    openDatabase().then((db) => setRepo(new Repo(db, DEFAULT_RULES, appGemini)), setError);
   }, []);
 
   const changed = useCallback(() => setVersion((v) => v + 1), []);

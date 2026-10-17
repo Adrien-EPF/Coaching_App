@@ -27,6 +27,7 @@ export function LogScreen() {
   const [logId, setLogId] = useState<number | null>(null);
   const [editing, setEditing] = useState<{ exercise: ExerciseLogDetail; set: SetLogDetail } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [validating, setValidating] = useState(false);
   const [validated, setValidated] = useState<StoredPlan | "none" | null>(null);
 
   useEffect(() => {
@@ -39,12 +40,15 @@ export function LogScreen() {
   const validate = async () => {
     if (logId === null) return;
     setError(null);
+    setValidating(true);
     try {
       const { plan } = await repo.validateSession(logId, todayIso());
       setValidated(plan ?? "none");
       changed(); // reload every screen
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setValidating(false);
     }
   };
 
@@ -89,7 +93,7 @@ export function LogScreen() {
                   {log.remaining === 1 ? "1 série reste" : `${log.remaining} séries restent`} à saisir ou à marquer comme non faite.
                 </Txt>
               )}
-              <Button label="Valider la séance" disabled={log.remaining > 0} onPress={validate} />
+              <Button label={validating ? "Planification de la prochaine séance…" : "Valider la séance"} disabled={log.remaining > 0 || validating} onPress={validate} />
             </View>
           )}
         </>
@@ -268,6 +272,8 @@ function ValidationResult({ plan, onDone }: { plan: StoredPlan | null; onDone: (
             ? `Prochaine séance : ${longDate(plan.date)}. ${plan.summary}.`
             : "Aucune séance à planifier pour la suite. Ajoute des séances au programme."}
         </Txt>
+        {plan && <Txt kind="caption" muted>{plan.source === "gemini" ? "Plan de Gemini" : "Plan des règles seules"}</Txt>}
+        {plan?.note && <Txt kind="caption">{plan.note}</Txt>}
       </Card>
       {plan?.exercises.map((e) => (
         <Card key={e.exerciseId}>

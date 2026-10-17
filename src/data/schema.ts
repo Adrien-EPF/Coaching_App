@@ -94,6 +94,21 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (program_session_id, exercise_id)
   );
   `,
+  `
+  -- Why a plan is not the expected one (e.g. Gemini unavailable, so rules only).
+  ALTER TABLE session_plan ADD COLUMN note TEXT;
+
+  -- Initial Weights (typed) or approved Starting Estimates: where an Exercise with no history starts.
+  CREATE TABLE starting_weight (
+    exercise_id INTEGER PRIMARY KEY REFERENCES exercise(id) ON DELETE CASCADE,
+    weight REAL,
+    reps INTEGER NOT NULL,
+    origin TEXT NOT NULL CHECK (origin IN ('manual', 'estimate'))
+  );
+
+  -- A one-off Test Session only exists on its date; a normal Program Session repeats on its slot.
+  ALTER TABLE program_session ADD COLUMN test_date TEXT;
+  `,
 ];
 
 export async function migrate(db: Db): Promise<void> {

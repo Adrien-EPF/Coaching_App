@@ -28,6 +28,14 @@ export interface ExerciseInput {
   equipment: string;
   /** Validated Sessions of this Exercise, newest first. */
   history: PastSession[];
+  /** Initial Weight or approved Starting Estimate, used while there is no history. */
+  start?: StartingLoad | null;
+}
+
+export interface StartingLoad {
+  /** null: bodyweight. */
+  weight: number | null;
+  reps: number;
 }
 
 export interface PlannedExercise {
@@ -46,19 +54,50 @@ export interface SessionPlan {
   exercises: PlannedExercise[];
   /** One line about the whole Session. */
   summary: string;
-  source: "rules";
+  source: "rules" | "gemini";
+  /** Why this plan is not the one expected (e.g. Gemini unavailable, so rules only). */
+  note: string | null;
 }
 
 export interface PlanInput {
   /** The day the planned Session is due. */
   date: IsoDate;
   exercises: ExerciseInput[];
+  /** Problem Reports and the like: passed to Gemini only. */
+  notes?: string[];
 }
 
 /** Rules-only Session Plan: what the Rules say, then bounded by the Guardrails. */
 export function planSession(rules: Rules, input: PlanInput): SessionPlan {
   const exercises = input.exercises.map((e) => ({ ...planExercise(rules, input.date, e), exerciseId: e.exerciseId }));
-  return { exercises, summary: summarize(input.exercises, exercises), source: "rules" };
+  return { exercises, summary: summarize(input.exercises, exercises), source: "rules", note: null };
+}
+
+/** What a planner (Gemini or any other) proposes for one Exercise, before the Guardrails. */
+export interface RawProposal {
+  weight: number | null;
+  reps: number;
+  sets: number;
+  reason: string | null;
+}
+
+/** Bounds any proposal by the Guardrails; the reason survives only if the weight really changed. */
+export function applyGuardrails(rules: Rules, date: IsoDate, ex: ExerciseInput, p: RawProposal): PlannedExercise {
+  const bodyweight = ex.equipment === BODYWEIGHT;
+  const base = ex.history.find((h) => logged(h).length > 0);
+  const days = base ? diffDays(date, base.date) : 0;
+  const pause = base ? rules.special_cases.pause.find((x) => x.max_days === null || days <= x.max_days) : undefined;
+  const equipment = rules.increments[ex.equipment] ?? FALLBACK_EQUIPMENT;
+  const ctx: Context = {
+    lastWeight: base ? workingWeight(base) : null,
+    equipment,
+    bodyweight,
+    goal: ex.goal,
+    longPause: !!pause && pause.decrease_pct > rules.guardrails.max_decrease_pct,
+    exemptFromIncreaseCap: !!base && base.goal !== ex.goal && rules.special_cases.goal_change.exempt_from_max_increase,
+  };
+  const weight = p.weight === null || bodyweight ? null : snap(equipment, p.weight, "nearest");
+  return { ...finish(rules, ctx, { ...p, weight }), exerciseId: ex.exerciseId };
 }
 
 interface Proposal {
@@ -95,6 +134,10 @@ function planExercise(rules: Rules, date: IsoDate, ex: ExerciseInput): PlannedEx
   const ctx: Context = { lastWeight, equipment, bodyweight, goal: ex.goal, longPause: false, exemptFromIncreaseCap: false };
 
   if (!base) {
+    if (ex.start) {
+      const weight = bodyweight || ex.start.weight === null ? null : snap(equipment, ex.start.weight, "nearest");
+      return finish(rules, ctx, { weight, reps: ex.start.reps, sets: ex.sets, reason: null });
+    }
     return finish(rules, ctx, { weight: null, reps: bottom, sets: ex.sets, reason: null });
   }
 
