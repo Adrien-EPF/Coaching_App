@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Réglages</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="ds/coach/components/bundle.css">
+<script src="ds/coach/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sofia+Sans+Condensed:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:var(--lime-ink)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div class="screen" data-theme="light" style="width: 390px; height: 900px;">
+  <header style="display: flex; align-items: center; gap: 4px; padding: 8px 16px 0 8px;">
+    <a class="icon-btn" href="Main.dc.html" aria-label="Retour"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg></a>
+    <h1 class="t-display-lg" style="margin: 0;">Réglages</h1>
+  </header>
+
+  <main style="flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 20px 16px 16px;">
+    <section aria-labelledby="s-rules" style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 id="s-rules" class="t-label" style="margin: 0; color: var(--ink-muted);">Règles</h2>
+      <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span class="t-body-strong">Version 1</span>
+          <span class="t-caption" style="color: var(--ink-muted);">16 octobre 2026</span>
+        </div>
+        <p class="t-caption" style="margin: 0; color: var(--ink-muted);">Double progression · hausse max +10 % · baisse max −10 % · RPE max 9 en Force et Hypertrophie.</p>
+        <x-import component-from-global-scope="Coach.Button" variant="secondary" block="{{yes}}">Importer une nouvelle version</x-import>
+      </div>
+    </section>
+
+    <section aria-labelledby="s-gem" style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 id="s-gem" class="t-label" style="margin: 0; color: var(--ink-muted);">Gemini</h2>
+      <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <label for="key" class="t-label" style="color: var(--ink-muted);">Clé API</label>
+        <input id="key" class="field num" type="password" value="AIzaSyD-coaching-demo-key" autocomplete="off">
+        <p class="t-caption" style="margin: 0; color: var(--ink-muted);">Un appel par séance validée. Si Gemini ne répond pas, le plan est calculé avec tes règles seules.</p>
+      </div>
+    </section>
+
+    <section aria-labelledby="s-theme" style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 id="s-theme" class="t-label" style="margin: 0; color: var(--ink-muted);">Thème</h2>
+      <div role="radiogroup" aria-labelledby="s-theme" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px;">
+        <button type="button" role="radio" aria-checked="false" class="chip" style="justify-content: center;">Clair</button>
+        <button type="button" role="radio" aria-checked="false" class="chip" style="justify-content: center;">Sombre</button>
+        <button type="button" role="radio" aria-checked="true" class="chip chip-on" style="justify-content: center;">Système</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="s-data" style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 id="s-data" class="t-label" style="margin: 0; color: var(--ink-muted);">Données</h2>
+      <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <p class="t-body" style="margin: 0;">Tout reste sur ce téléphone. Exporte régulièrement : un téléphone perdu, c'est l'historique perdu.</p>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+          <x-import component-from-global-scope="Coach.Button" variant="secondary" block="{{yes}}">Export JSON</x-import>
+          <x-import component-from-global-scope="Coach.Button" variant="secondary" block="{{yes}}">Export CSV</x-import>
+        </div>
+        <span class="t-caption" style="color: var(--ink-muted);">Dernier export : 12 octobre</span>
+      </div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":900}}'>
+class Component extends DCLogic {
+  renderVals() { return { yes: true }; }
+}
+</script>
+</body>
+</html>

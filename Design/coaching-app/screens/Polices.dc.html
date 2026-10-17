@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Polices des titres</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="ds/coach/components/bundle.css">
+<script src="ds/coach/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,700..800&amp;family=Instrument+Sans:wdth,wght@75..100,600..700&amp;family=Saira+Condensed:wght@700;800&amp;family=Sofia+Sans+Condensed:wght@700;800&amp;display=swap">
+<style>
+body{margin:0}
+.opt-a{--font-display:"Saira Condensed","Barlow Condensed",sans-serif}
+.opt-b{--font-display:"Bricolage Grotesque","Barlow Condensed",sans-serif;font-stretch:75%}
+.opt-b *{font-stretch:75%}
+.opt-c{--font-display:"Sofia Sans Condensed","Barlow Condensed",sans-serif}
+.opt-d{--font-display:"Instrument Sans","Barlow Condensed",sans-serif}
+.opt-d *{font-stretch:75%}
+</style>
+</helmet>
+<div class="screen" data-theme="light" style="width: 1720px; height: 760px; padding: 32px; gap: 24px;">
+  <div style="display: flex; justify-content: space-between; align-items: baseline;">
+    <h1 class="t-label" style="margin: 0; color: var(--ink-muted); font-family: var(--font-sans); letter-spacing: 0.08em;">Polices des titres · le texte reste en Barlow</h1>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; flex-grow: 1;">
+    <sc-for list="{{options}}" as="o" hint-placeholder-count="4">
+      <section class="{{o.cls}}" style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span class="t-title-md">{{o.letter}}</span>
+          <span class="t-body-strong" style="font-family: var(--font-sans); color: var(--ink-muted);">{{o.name}}</span>
+        </div>
+        <div style="background: var(--contrast); color: var(--on-contrast); border-radius: var(--radius-lg); padding: 20px 16px; display: flex; flex-direction: column; gap: 12px;">
+          <span class="t-label">Samedi 17 octobre</span>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <span class="t-display-lg">Séance C</span>
+            <span class="t-title-md">6/16</span>
+          </div>
+          <div style="height: 8px; border-radius: var(--radius-xs); background: var(--contrast-track); overflow: hidden;"><div style="width: 38%; height: 100%; background: var(--contrast-fill);"></div></div>
+        </div>
+        <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <span class="t-label" style="color: var(--ink-muted);">Exercice 3/4</span>
+          <span class="t-title-lg">Développé couché</span>
+          <div style="display: flex; align-items: baseline; gap: 8px; font-family: var(--font-display); font-variant-numeric: tabular-nums;">
+            <span style="font-weight: 800; font-size: 48px; line-height: 48px;">82 kg</span>
+            <span style="font-weight: 700; font-size: 32px; line-height: 34px; color: var(--ink-muted);">× 3</span>
+          </div>
+          <p class="t-caption" style="margin: 0; color: var(--ink-muted);">4 séries · fourchette 3-5 reps · Barre</p>
+          <p class="t-body-lg" style="margin: 0;">Première série à 7 reps la semaine dernière : la charge était trop légère.</p>
+        </div>
+        <div class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 4px;">
+          <span class="t-label" style="color: var(--ink-muted);">Squat · PR 5 reps</span>
+          <span class="t-display-xl">100 <span style="font-size: 24px;">kg</span></span>
+        </div>
+        <span class="ca-btn ca-btn-primary ca-btn-lg ca-btn-block">Commencer la séance</span>
+      </section>
+    </sc-for>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1720,"height":760}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      options: [
+        { letter: 'A', name: 'Saira Condensed', cls: 'opt-a' },
+        { letter: 'B', name: 'Bricolage Grotesque', cls: 'opt-b' },
+        { letter: 'C', name: 'Sofia Sans Condensed', cls: 'opt-c' },
+        { letter: 'D', name: 'Instrument Sans', cls: 'opt-d' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

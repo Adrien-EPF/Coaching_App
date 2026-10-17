@@ -1,0 +1,19 @@
+<!-- @dsCard group="Actions" height=120 -->
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Button</title></head>
+<body>
+<div id="root"></div>
+<script>
+  var C = window.Coach, h = React.createElement;
+  ReactDOM.createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+    h('div', {className:'ca-row'},
+  h(C.Button, null, 'Valider la séance'),
+  h(C.Button, {variant:'secondary'}, 'Signaler un problème'),
+  h(C.Button, {variant:'ghost'}, 'Passer'),
+  h(C.Button, {variant:'danger'}, 'Marquer manquée'),
+  h(C.Button, {disabled:true}, 'Valider la séance')),
+h('div', {className:'ca-row', style:{maxWidth:420, paddingTop:0}}, h(C.Button, {size:'lg', block:true}, 'Valider la séance'))));
+</script>
+</body>
+</html>

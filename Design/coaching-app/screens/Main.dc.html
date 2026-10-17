@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Aujourd'hui</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="ds/coach/components/bundle.css">
+<script src="ds/coach/components/bundle.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sofia+Sans+Condensed:wght@600;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:var(--lime-ink)}a:hover{color:var(--ink)}
+</style>
+</helmet>
+<div class="screen" data-theme="light" style="width: 390px; height: 844px;">
+  <header style="display: flex; align-items: center; justify-content: space-between; padding: 8px 8px 0 16px;">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <svg viewBox="0 0 96 96" width="32" height="32" role="img" aria-label="Coaching App"><g fill="none" stroke="currentColor" stroke-width="10"><polyline points="16,40 48,12 80,40"></polyline><polyline points="30,58 48,42 66,58"></polyline></g><g fill="currentColor"><rect x="30" y="72" width="36" height="7"></rect><rect x="21" y="62" width="10" height="27" rx="2"></rect><rect x="65" y="62" width="10" height="27" rx="2"></rect><rect x="12" y="66" width="8" height="19" rx="2"></rect><rect x="76" y="66" width="8" height="19" rx="2"></rect><rect x="6" y="72" width="6" height="7" rx="1"></rect><rect x="84" y="72" width="6" height="7" rx="1"></rect></g></svg>
+      <span style="font-family: var(--font-display); font-weight: 800; font-size: 20px; letter-spacing: 0.02em;">COACHING APP</span>
+    </div>
+    <a class="icon-btn" href="Reglages.dc.html" aria-label="Réglages"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"></path></svg></a>
+  </header>
+
+  <main style="flex-grow: 1; display: flex; flex-direction: column; gap: 20px; padding: 16px 16px 0;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="t-label" style="color: var(--ink-muted);">Samedi 17 octobre</span>
+        <x-import component-from-global-scope="Coach.SessionStatus" status="today"></x-import>
+      </div>
+      <h1 class="t-display-lg" style="margin: 0;">Séance C</h1>
+      <p class="t-caption" style="margin: 0; color: var(--ink-muted);">Force 2026 · cycle d'une semaine · semaine 3</p>
+    </div>
+
+    <x-import component-from-global-scope="Coach.RecommendationNote" variant="session">Squat et développé couché montent. Tractions lestées : même charge, on vise 5 reps sur la dernière série.</x-import>
+
+    <section class="card" aria-labelledby="plan-title" style="display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line);">
+        <h2 id="plan-title" class="t-label" style="margin: 0; color: var(--ink-muted);">Plan de la séance</h2>
+        <span class="t-caption" style="color: var(--ink-muted);">4 exercices · 16 séries</span>
+      </div>
+      <sc-for list="{{exercises}}" as="ex" hint-placeholder-count="4">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line);">
+          <span class="t-title-sm" style="width: 20px; color: var(--ink-muted);">{{ex.n}}</span>
+          <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; align-items: flex-start;">
+            <span class="t-body-strong">{{ex.name}}</span>
+            <x-import component-from-global-scope="Coach.GoalBadge" goal="{{ex.goal}}" size="sm"></x-import>
+          </div>
+          <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+            <span class="t-title-md">{{ex.load}}</span>
+            <span class="t-caption num" style="color: {{ex.deltaColor}}; font-weight: 600;">{{ex.delta}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </section>
+  </main>
+
+  <div style="display: flex; flex-direction: column; gap: 8px; padding: 16px;">
+    <a class="ca-btn ca-btn-primary ca-btn-lg ca-btn-block" href="Seance.dc.html">Commencer la séance</a>
+    <a class="ca-btn ca-btn-ghost ca-btn-block" href="Probleme.dc.html">Signaler un problème</a>
+  </div>
+
+  <nav class="nav" aria-label="Navigation principale">
+    <a href="Main.dc.html" aria-current="page"><span class="pill"><svg class="icon icon-20" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5h11M6.5 17.5h11M3 9v6M21 9v6M6.5 5v14M17.5 5v14"></path></svg></span>Séance</a>
+    <a href="Calendrier.dc.html"><span class="pill"><svg class="icon icon-20" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg></span>Calendrier</a>
+    <a href="Programme.dc.html"><span class="pill"><svg class="icon icon-20" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg></span>Programme</a>
+    <a href="Progres.dc.html"><span class="pill"><svg class="icon icon-20" viewBox="0 0 24 24" aria-hidden="true"><path d="M22 7l-8.5 8.5-5-5L2 17"></path><path d="M16 7h6v6"></path></svg></span>Progrès</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var up = 'var(--lime-ink)', same = 'var(--ink-muted)';
+    return {
+      exercises: [
+        { n: '1', name: 'Squat', goal: 'strength', load: '104 kg × 3', delta: '↑ +4 kg', deltaColor: up },
+        { n: '2', name: 'Tractions lestées', goal: 'strength', load: '+12 kg × 5', delta: '= Même charge', deltaColor: same },
+        { n: '3', name: 'Développé couché', goal: 'strength', load: '82 kg × 3', delta: '↑ +6 kg', deltaColor: up },
+        { n: '4', name: 'Rowing haltère', goal: 'hypertrophy', load: '30 kg × 8', delta: '= Même charge', deltaColor: same }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>
