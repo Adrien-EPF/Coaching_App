@@ -1,7 +1,11 @@
 import { CycleKind, datesForSlot, isValidSlot } from "../domain/cycle";
 import { IsoDate } from "../domain/dates";
 import { addDays } from "../domain/dates";
+import { DEFAULT_RULES, Rules } from "../rules/rules";
 import { Db, first } from "./db";
+import { Logbook } from "./logbook";
+
+export type { ExerciseLogDetail, NumbersLogged, SessionLogDetail, SetLogDetail, StoredPlan } from "./logbook";
 
 export type TrainingGoal = "strength" | "endurance" | "hypertrophy";
 
@@ -26,6 +30,8 @@ export interface SessionExercise {
   position: number;
   sets: number;
   goal: TrainingGoal;
+  /** A key of the Rules' increments, or "bodyweight". */
+  equipment: string;
 }
 
 export interface ProgramDetail {
@@ -33,7 +39,7 @@ export interface ProgramDetail {
   sessions: (ProgramSession & { exercises: SessionExercise[] })[];
 }
 
-export type PlannedStatus = "planned" | "skipped" | "missed" | "moved";
+export type PlannedStatus = "planned" | "done" | "skipped" | "missed" | "moved";
 
 export type CalendarItem =
   | {
@@ -68,7 +74,23 @@ const toProgram = (r: ProgramRow): Program => ({ id: r.id, name: r.name, cycle: 
 
 /** All reads and writes of the Program, its Exercises and the calendar. */
 export class Repo {
-  constructor(private db: Db) {}
+  private logbook: Logbook;
+
+  constructor(
+    private db: Db,
+    rules: Rules = DEFAULT_RULES,
+  ) {
+    this.logbook = new Logbook(db, rules, this);
+  }
+
+  // --- Session logging, Validation and planning (see Logbook) ---
+  startSession: Logbook["startSession"] = (...a) => this.logbook.startSession(...a);
+  getSessionLog: Logbook["getSessionLog"] = (...a) => this.logbook.getSessionLog(...a);
+  logSet: Logbook["logSet"] = (...a) => this.logbook.logSet(...a);
+  setSetNotCompleted: Logbook["setSetNotCompleted"] = (...a) => this.logbook.setSetNotCompleted(...a);
+  setExerciseNotCompleted: Logbook["setExerciseNotCompleted"] = (...a) => this.logbook.setExerciseNotCompleted(...a);
+  validateSession: Logbook["validateSession"] = (...a) => this.logbook.validateSession(...a);
+  getPlan: Logbook["getPlan"] = (...a) => this.logbook.getPlan(...a);
 
   async createProgram(p: { name: string; cycle: CycleKind; startDate: IsoDate }): Promise<number> {
     const name = p.name.trim();
@@ -108,7 +130,7 @@ export class Repo {
   /** Adds an Exercise to a Session: an existing one by id, or a new one by name. */
   async addExercise(
     sessionId: number,
-    e: ({ exerciseId: number } | { name: string }) & { sets: number; goal: TrainingGoal },
+    e: ({ exerciseId: number } | { name: string; equipment?: string }) & { sets: number; goal: TrainingGoal },
   ): Promise<number> {
     if (!Number.isInteger(e.sets) || e.sets < 1) throw new Error("Il faut au moins une série.");
     let exerciseId: number;
@@ -117,7 +139,7 @@ export class Repo {
     } else {
       const name = e.name.trim();
       if (!name) throw new Error("L'exercice a besoin d'un nom.");
-      exerciseId = (await this.db.run("INSERT INTO exercise (name) VALUES (?)", [name])).lastInsertRowId;
+      exerciseId = (await this.db.run("INSERT INTO exercise (name, equipment) VALUES (?, ?)", [name, e.equipment ?? "machine"])).lastInsertRowId;
     }
     const last = await first<{ p: number | null }>(
       this.db,
@@ -155,8 +177,9 @@ export class Repo {
       position: number;
       sets: number;
       goal: TrainingGoal;
+      equipment: string;
     }>(
-      `SELECT se.id, se.exercise_id, e.name, se.position, se.sets, se.goal
+      `SELECT se.id, se.exercise_id, e.name, e.equipment, se.position, se.sets, se.goal
          FROM session_exercise se JOIN exercise e ON e.id = se.exercise_id
         WHERE se.program_session_id = ? ORDER BY se.position`,
       [sessionId],
@@ -168,6 +191,7 @@ export class Repo {
       position: r.position,
       sets: r.sets,
       goal: r.goal,
+      equipment: r.equipment,
     }));
   }
 
@@ -266,14 +290,22 @@ export class Repo {
         [program.id, from, to, from, to],
       );
       const byKey = new Map(occurrences.map((o) => [`${o.program_session_id}|${o.date}`, o]));
-      const statusOn = (date: IsoDate, base: PlannedStatus): PlannedStatus =>
-        blocked.has(date) ? "skipped" : date < today ? "missed" : base;
+      const done = new Set(
+        (
+          await this.db.all<{ program_session_id: number; date: IsoDate }>(
+            "SELECT program_session_id, date FROM session_log WHERE status = 'validated' AND date BETWEEN ? AND ?",
+            [from, to],
+          )
+        ).map((l) => `${l.program_session_id}|${l.date}`),
+      );
+      const statusOn = (sessionId: number, date: IsoDate, base: PlannedStatus): PlannedStatus =>
+        done.has(`${sessionId}|${date}`) ? "done" : blocked.has(date) ? "skipped" : date < today ? "missed" : base;
 
       for (const s of sessions) {
         const common = { type: "planned" as const, sessionId: s.id, name: s.name, exerciseCount: s.exercises, setCount: s.sets ?? 0 };
         for (const date of datesForSlot(program.cycle, program.startDate, s.slot, from, to)) {
           const o = byKey.get(`${s.id}|${date}`);
-          const status: PlannedStatus = o ? (o.status === "moved" ? "moved" : o.status) : statusOn(date, "planned");
+          const status: PlannedStatus = done.has(`${s.id}|${date}`) ? "done" : o ? o.status : statusOn(s.id, date, "planned");
           days.get(date)!.push({ ...common, status, plannedDate: date, ...(o?.moved_to ? { movedTo: o.moved_to } : {}) });
         }
       }
@@ -288,7 +320,7 @@ export class Repo {
           name: s.name,
           exerciseCount: s.exercises,
           setCount: s.sets ?? 0,
-          status: statusOn(o.moved_to, "planned"),
+          status: statusOn(s.id, o.moved_to, "planned"),
           movedFrom: o.date,
           plannedDate: o.date,
         });

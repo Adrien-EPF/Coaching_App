@@ -45,6 +45,55 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX day_entry_date ON day_entry(date);
   `,
+  `
+  -- The equipment decides which increments the Rules allow; "bodyweight" has no load to progress.
+  ALTER TABLE exercise ADD COLUMN equipment TEXT NOT NULL DEFAULT 'machine';
+
+  -- A Session as actually done on a date. Sets snapshot the Program so later edits never rewrite history.
+  CREATE TABLE session_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    program_session_id INTEGER REFERENCES program_session(id) ON DELETE SET NULL,
+    name TEXT NOT NULL,
+    date TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'validated')),
+    validated_at TEXT
+  );
+  CREATE UNIQUE INDEX session_log_slot ON session_log(program_session_id, date);
+  CREATE TABLE set_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session_log_id INTEGER NOT NULL REFERENCES session_log(id) ON DELETE CASCADE,
+    exercise_id INTEGER NOT NULL REFERENCES exercise(id),
+    position INTEGER NOT NULL,
+    goal TEXT NOT NULL,
+    set_index INTEGER NOT NULL,
+    planned_weight REAL,
+    planned_reps INTEGER,
+    weight REAL,
+    reps INTEGER,
+    rpe REAL,
+    not_completed INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (session_log_id, exercise_id, set_index)
+  );
+  CREATE INDEX set_log_exercise ON set_log(exercise_id);
+
+  -- The Session Plan for the next occurrence of a Program Session, replaced at each Validation.
+  CREATE TABLE session_plan (
+    program_session_id INTEGER PRIMARY KEY REFERENCES program_session(id) ON DELETE CASCADE,
+    date TEXT NOT NULL,
+    summary TEXT NOT NULL,
+    source TEXT NOT NULL CHECK (source IN ('rules', 'gemini'))
+  );
+  CREATE TABLE plan_exercise (
+    program_session_id INTEGER NOT NULL REFERENCES session_plan(program_session_id) ON DELETE CASCADE,
+    exercise_id INTEGER NOT NULL REFERENCES exercise(id),
+    weight REAL,
+    reps INTEGER NOT NULL,
+    sets INTEGER NOT NULL,
+    reason TEXT,
+    warnings TEXT NOT NULL DEFAULT '[]',
+    PRIMARY KEY (program_session_id, exercise_id)
+  );
+  `,
 ];
 
 export async function migrate(db: Db): Promise<void> {

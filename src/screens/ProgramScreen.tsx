@@ -14,6 +14,15 @@ export const GOAL_LABELS: Record<TrainingGoal, string> = {
   hypertrophy: "Hypertrophie",
 };
 
+export const EQUIPMENT_LABELS: Record<string, string> = {
+  barbell: "Barre",
+  dumbbell: "Haltères",
+  machine: "Machine",
+  cable: "Poulie",
+  weight_belt: "Ceinture de lest",
+  bodyweight: "Poids du corps",
+};
+
 export function ProgramScreen() {
   const detail = useQuery<ProgramDetail | null>(async (repo) => {
     const p = await repo.getActiveProgram();
@@ -239,11 +248,12 @@ function ExerciseSheet({ visible, onClose, sessionId }: { visible: boolean; onCl
   const [pickedId, setPickedId] = useState<number | null>(null);
   const [sets, setSets] = useState("3");
   const [goal, setGoal] = useState<TrainingGoal>("strength");
+  const [equipment, setEquipment] = useState("machine");
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
     const n = Number(sets);
-    const target = pickedId !== null ? { exerciseId: pickedId } : { name };
+    const target = pickedId !== null ? { exerciseId: pickedId } : { name, equipment };
     const ok = await act(() => repo.addExercise(sessionId, { ...target, sets: n, goal }), setError);
     if (ok) {
       setName("");
@@ -266,6 +276,16 @@ function ExerciseSheet({ visible, onClose, sessionId }: { visible: boolean; onCl
         </View>
       )}
       {pickedId === null && <Field label="Nouvel exercice" value={name} onChangeText={setName} placeholder="Tractions lestées" />}
+      {pickedId === null && (
+        <View style={{ gap: space[1] }}>
+          <Txt kind="caps" muted>Matériel</Txt>
+          <Row>
+            {Object.keys(EQUIPMENT_LABELS).map((k) => (
+              <Chip key={k} label={EQUIPMENT_LABELS[k]} selected={equipment === k} onPress={() => setEquipment(k)} />
+            ))}
+          </Row>
+        </View>
+      )}
       <Field label="Nombre de séries" value={sets} onChangeText={setSets} keyboardType="number-pad" />
       <View style={{ gap: space[1] }}>
         <Txt kind="caps" muted>Objectif</Txt>

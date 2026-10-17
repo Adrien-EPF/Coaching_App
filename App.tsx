@@ -7,12 +7,15 @@ import {
 import { SofiaSansCondensed_700Bold, SofiaSansCondensed_800ExtraBold } from "@expo-google-fonts/sofia-sans-condensed";
 import { DarkTheme, DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { RepoProvider } from "./src/data/RepoContext";
+import type { RootParams } from "./src/navigation";
+import { LogScreen } from "./src/screens/LogScreen";
 import { CalendarScreen } from "./src/screens/CalendarScreen";
 import { ProgramScreen } from "./src/screens/ProgramScreen";
 import { ProgressScreen } from "./src/screens/ProgressScreen";
@@ -20,6 +23,7 @@ import { TodayScreen } from "./src/screens/TodayScreen";
 import { fonts, useColors, useIsDark } from "./src/ui/theme";
 
 const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator<RootParams>();
 
 function Loading() {
   const c = useColors();
@@ -32,10 +36,7 @@ function Loading() {
 
 function Tabs() {
   const c = useColors();
-  const dark = useIsDark();
-  const base = dark ? DarkTheme : DefaultTheme;
   return (
-    <NavigationContainer theme={{ ...base, colors: { ...base.colors, background: c.surface, card: c.surfaceRaised, text: c.ink, border: c.line, primary: c.ink } }}>
       <Tab.Navigator
         screenOptions={{
           headerShown: false,
@@ -52,6 +53,19 @@ function Tabs() {
         <Tab.Screen name="Programme" component={ProgramScreen} />
         <Tab.Screen name="Progrès" component={ProgressScreen} />
       </Tab.Navigator>
+  );
+}
+
+function Root() {
+  const c = useColors();
+  const dark = useIsDark();
+  const base = dark ? DarkTheme : DefaultTheme;
+  return (
+    <NavigationContainer theme={{ ...base, colors: { ...base.colors, background: c.surface, card: c.surfaceRaised, text: c.ink, border: c.line, primary: c.ink } }}>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="Tabs" component={Tabs} />
+        <Stack.Screen name="Log" component={LogScreen} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }
@@ -70,7 +84,7 @@ export default function App() {
       <StatusBar style="auto" />
       {loaded ? (
         <RepoProvider fallback={<Loading />}>
-          <Tabs />
+          <Root />
         </RepoProvider>
       ) : (
         <Loading />

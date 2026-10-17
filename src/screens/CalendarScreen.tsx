@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 import { Pressable, View } from "react-native";
+import type { RootParams } from "../navigation";
 import { useAction, useQuery, useStore } from "../data/RepoContext";
 import { CalendarDay, CalendarItem } from "../data/repo";
 import { addDays, daysInMonth, IsoDate, mondayOf, todayIso, toIso, weekday } from "../domain/dates";
@@ -11,6 +13,7 @@ type Planned = Extract<CalendarItem, { type: "planned" }>;
 
 const STATUS_LABELS: Record<Planned["status"], string> = {
   planned: "Prévue",
+  done: "Faite",
   skipped: "Passée volontairement",
   missed: "Manquée",
   moved: "Déplacée",
@@ -96,7 +99,7 @@ function Legend({ color, label }: { color: string; label: string }) {
 function marksOf(items: CalendarItem[], c: ReturnType<typeof useColors>): string[] {
   return items.map((i) => {
     if (i.type !== "planned") return i.type === "rest" ? c.enduranceInk : i.type === "injury" ? c.warningInk : c.ink;
-    return i.status === "planned" ? c.lime : i.status === "missed" ? c.danger : c.lineStrong;
+    return i.status === "planned" || i.status === "done" ? c.lime : i.status === "missed" ? c.danger : c.lineStrong;
   });
 }
 
@@ -185,9 +188,11 @@ function ItemCard({ item, date, onMove }: { item: CalendarItem; date: IsoDate; o
     );
   }
 
+  const navigation = useNavigation<NavigationProp<RootParams>>();
+  const openLog = (programSessionId: number, on: IsoDate) => navigation.navigate("Log", { programSessionId, date: on });
   const movedIn = item.movedFrom !== undefined;
   const reset = () => act(() => repo.clearOccurrence(item.sessionId, item.plannedDate));
-  const color = item.status === "missed" ? c.danger : item.status === "planned" ? c.limeInk : c.inkMuted;
+  const color = item.status === "missed" ? c.danger : item.status === "planned" || item.status === "done" ? c.limeInk : c.inkMuted;
   return (
     <Card>
       <Txt kind="strong">{item.name}</Txt>
@@ -211,7 +216,13 @@ function ItemCard({ item, date, onMove }: { item: CalendarItem; date: IsoDate; o
             )}
           </>
         ) : null}
-        {!movedIn && item.status !== "planned" && (
+        {item.status === "done" && (
+          <Button label="Voir la séance" kind="secondary" small onPress={() => openLog(item.sessionId, date)} />
+        )}
+        {item.status === "planned" && date <= todayIso() && (
+          <Button label="Commencer" small onPress={() => openLog(item.sessionId, date)} />
+        )}
+        {!movedIn && item.status !== "planned" && item.status !== "done" && (
           <Button label="Rétablir" kind="secondary" small onPress={reset} />
         )}
         {movedIn && <Button label="Annuler le déplacement" kind="secondary" small onPress={reset} />}

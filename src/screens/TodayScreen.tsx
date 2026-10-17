@@ -1,14 +1,17 @@
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 import React from "react";
 import { View } from "react-native";
 import { useQuery } from "../data/RepoContext";
 import { SessionExercise } from "../data/repo";
 import { addDays, todayIso } from "../domain/dates";
 import { longDate, plural } from "../domain/format";
-import { Card, Screen, Txt } from "../ui/kit";
+import type { RootParams } from "../navigation";
+import { Button, Card, Screen, Txt } from "../ui/kit";
 import { space } from "../ui/theme";
 import { GOAL_LABELS } from "./ProgramScreen";
 
 export function TodayScreen() {
+  const navigation = useNavigation<NavigationProp<RootParams>>();
   const today = todayIso();
   const plan = useQuery(async (repo) => {
     const days = await repo.getCalendar(today, addDays(today, 31), today);
@@ -38,6 +41,9 @@ export function TodayScreen() {
               {plural(plan.item.exerciseCount, "exercice", "exercices")} · {plural(plan.item.setCount, "série", "séries")}
             </Txt>
           </Card>
+          {plan.date <= today ? (
+            <Button label="Commencer la séance" onPress={() => navigation.navigate("Log", { programSessionId: plan.item.sessionId, date: plan.date })} />
+          ) : null}
           <Txt kind="caps" muted>Plan de la séance</Txt>
           {plan.exercises.map((e) => (
             <ExerciseRow key={e.id} e={e} />
