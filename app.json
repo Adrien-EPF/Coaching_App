@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Coaching App",
+    "slug": "coaching-app",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#0e100d",
+    "android": {
+      "package": "com.adrienepf.coachingapp",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#111410",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": ["expo-sqlite", "expo-font", "expo-secure-store"]
+  }
+}

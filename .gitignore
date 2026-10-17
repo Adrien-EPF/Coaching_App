@@ -13,3 +13,7 @@ dist/
 web-build/
 *.apk
 *.aab
+
+# Generated native projects (built by CI from app.json)
+android/
+ios/

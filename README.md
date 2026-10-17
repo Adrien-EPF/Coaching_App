@@ -16,7 +16,7 @@ A personal Android app to track gym progress. After each session, Gemini and you
 ![Platform](https://img.shields.io/badge/PLATFORM-ANDROID-111410?style=for-the-badge&labelColor=111410&color=c6f432)
 ![Stack](https://img.shields.io/badge/EXPO-REACT%20NATIVE-111410?style=for-the-badge&labelColor=111410&color=c6f432)
 ![Data](https://img.shields.io/badge/DATA-LOCAL%20ONLY-111410?style=for-the-badge&labelColor=111410&color=c6f432)
-![Status](https://img.shields.io/badge/STATUS-DESIGN%20PHASE-111410?style=for-the-badge&labelColor=111410&color=f4f5f0)
+![Status](https://img.shields.io/badge/STATUS-IN%20DEVELOPMENT-111410?style=for-the-badge&labelColor=111410&color=f4f5f0)
 
 [Overview](#overview) &nbsp;·&nbsp; [How it works](#how-it-works) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Progression rules](#progression-rules) &nbsp;·&nbsp; [Screens](#screens) &nbsp;·&nbsp; [Design](#design) &nbsp;·&nbsp; [Roadmap](#roadmap) &nbsp;·&nbsp; [Repository](#repository)
 
@@ -24,7 +24,7 @@ A personal Android app to track gym progress. After each session, Gemini and you
 
 <br>
 
-> **Status: design phase. No code yet.** Vocabulary lives in [CONTEXT.md](./CONTEXT.md), progression rules in [RULES.md](./RULES.md), decisions in [docs/adr](./docs/adr), and the work is tracked in the [issues](https://github.com/Adrien-EPF/Coaching_App/issues).
+> **Status: in development** (app skeleton and Program calendar done). Vocabulary lives in [CONTEXT.md](./CONTEXT.md), progression rules in [RULES.md](./RULES.md), decisions in [docs/adr](./docs/adr), and the work is tracked in the [issues](https://github.com/Adrien-EPF/Coaching_App/issues).
 
 <br>
 
@@ -313,7 +313,15 @@ A key set in `.env` is built into the APK, which is fine for a free key in a per
 │   └── coaching-app/
 │       ├── design-system/   tokens, components, fonts, logos
 │       └── screens/         the 13 designed screens
-├── src/config/      Gemini key loading
+├── App.tsx          app entry: fonts, database, tab navigation
+├── src/
+│   ├── config/      Gemini key loading
+│   ├── domain/      dates and Cycle maths (pure)
+│   ├── data/        SQLite schema and the Repo
+│   ├── screens/     Séance, Calendrier, Programme, Progrès
+│   └── ui/          design tokens and components
+├── test/            behavior tests against a real in-memory SQLite
+├── .github/         workflow that builds the APK
 └── .env.example     template for your local .env
 ```
 
