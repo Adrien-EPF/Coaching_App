@@ -6,7 +6,7 @@ import { Button, ErrorText, Field, Row, Sheet, Txt, Chip } from "../ui/kit";
 
 export const PROBLEM_KINDS = ["Mauvais sommeil", "Douleur", "Fatigue", "Malade", "Stress", "Autre"];
 
-/** Signaler un problème on an upcoming Session: re-plans it with the note. */
+/** Reports a problem on an upcoming Session: re-plans it with the note. */
 export function ProblemSheet({
   target,
   onClose,

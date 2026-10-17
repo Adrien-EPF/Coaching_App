@@ -204,7 +204,7 @@ export class Logbook {
   // --- Problem Reports ---
 
   /** Attaches a Problem Report to an upcoming Session and regenerates its Session Plan with the note. */
-  async reportProblem(programSessionId: number, date: IsoDate, report: { kinds: string[]; details: string }): Promise<StoredPlan | null> {
+  async reportProblem(programSessionId: number, date: IsoDate, report: Omit<ProblemReport, "id">): Promise<StoredPlan | null> {
     const details = report.details.trim();
     if (report.kinds.length === 0 && !details) throw new Error("Choisis ce qui ne va pas ou précise le problème.");
     const done = await first<{ id: number }>(this.db, "SELECT id FROM session_log WHERE program_session_id = ? AND date = ? AND status = 'validated'", [

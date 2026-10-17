@@ -69,7 +69,7 @@ export interface PlanInput {
   problemReported?: boolean;
 }
 
-const noIncrease = (rules: Rules, input: PlanInput) => !!input.problemReported && !rules.common.problem_report.allow_increase;
+export const noIncrease = (rules: Rules, input: PlanInput) => !!input.problemReported && !rules.common.problem_report.allow_increase;
 
 /** Rules-only Session Plan: what the Rules say, then bounded by the Guardrails. */
 export function planSession(rules: Rules, input: PlanInput): SessionPlan {

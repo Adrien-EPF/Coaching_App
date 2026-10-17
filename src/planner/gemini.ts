@@ -1,4 +1,4 @@
-import { applyGuardrails, ExerciseInput, PastSession, PlanInput, planSession, PlannedExercise, SessionPlan } from "./planner";
+import { applyGuardrails, ExerciseInput, noIncrease, PastSession, PlanInput, planSession, PlannedExercise, SessionPlan } from "./planner";
 import { BODYWEIGHT, Rules } from "../rules/rules";
 
 /** The seam to Gemini: a prompt in, the model's raw text out. Tests plug a fake in here. */
@@ -13,7 +13,7 @@ export async function planWithGemini(rules: Rules, input: PlanInput, generate: G
   if (!generate) return rulesOnly(NO_KEY);
   try {
     const parsed = parsePlan(await generate(planPrompt(rules, input)), input.exercises);
-    const exercises = input.exercises.map((e, i) => applyGuardrails(rules, input.date, e, parsed.exercises[i], !!input.problemReported && !rules.common.problem_report.allow_increase));
+    const exercises = input.exercises.map((e, i) => applyGuardrails(rules, input.date, e, parsed.exercises[i], noIncrease(rules, input)));
     return { exercises, summary: parsed.summary ?? planSession(rules, input).summary, source: "gemini", note: null };
   } catch {
     return rulesOnly(UNAVAILABLE);
@@ -42,7 +42,7 @@ function planPrompt(rules: Rules, input: PlanInput): string {
     `Answer with JSON only: {"summary": string, "exercises": [{"exerciseId": number, "weight": number|null, "reps": integer, "sets": integer, "reason": string|null}]}, one entry per Exercise.`,
     `Session due on: ${input.date}`,
     `Rules:\n${JSON.stringify(rulesFor(rules), null, 2)}`,
-    ...(input.problemReported && !rules.common.problem_report.allow_increase
+    ...(noIncrease(rules, input)
       ? ["A Problem Report is attached to this Session: keep or lower the weights, never raise them. Say so in the `reason` of any Exercise you lower."]
       : []),
     `Notes from the athlete (Problem Reports, Objectives):\n${input.notes?.length ? input.notes.map((n) => `- ${n}`).join("\n") : "none"}`,
