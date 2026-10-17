@@ -27,6 +27,6 @@ Status: design phase. No code yet. Vocabulary lives in [CONTEXT.md](./CONTEXT.md
 
 Trend charts, volume and frequency objectives, rest timer, bodyweight tracking, automatic evening-before planning, cloud sync.
 
-## Still to provide
+## Design
 
-- The design document (for Claude Design).
+The design is in [Design/coaching-app](./Design/coaching-app): the design system (tokens, components, fonts, logos; its README holds the content and visual rules) and 13 screens in `screens/` (French UI, light and dark themes).
