@@ -11,7 +11,7 @@
       "package": "com.adrienepf.coachingapp",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#111410",
+        "backgroundColor": "#c6f432",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
