@@ -1,12 +1,12 @@
 import { NavigationProp, useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
 import { View } from "react-native";
-import { useQuery } from "../data/RepoContext";
+import { useAction, useQuery, useStore } from "../data/RepoContext";
 import { SessionExercise, StoredPlan } from "../data/repo";
 import { addDays, todayIso } from "../domain/dates";
 import { longDate, plural } from "../domain/format";
 import type { RootParams } from "../navigation";
-import { Button, Card, Screen, Txt } from "../ui/kit";
+import { Button, Card, ErrorText, Screen, Txt } from "../ui/kit";
 import { space } from "../ui/theme";
 import { GOAL_LABELS } from "./ProgramScreen";
 import { ProblemSheet } from "./ProblemSheet";
@@ -14,7 +14,11 @@ import { ProblemSheet } from "./ProblemSheet";
 export function TodayScreen() {
   const navigation = useNavigation<NavigationProp<RootParams>>();
   const today = todayIso();
+  const { repo } = useStore();
+  const act = useAction();
   const [reporting, setReporting] = useState(false);
+  const [replanning, setReplanning] = useState(false);
+  const [replanError, setReplanError] = useState<string | null>(null);
   const plan = useQuery(async (repo) => {
     const days = await repo.getCalendar(today, addDays(today, 31), today);
     for (const day of days) {
@@ -61,6 +65,21 @@ export function TodayScreen() {
           ))}
           <Txt kind="caps" muted>Plan de la séance</Txt>
           {plan.stored?.note ? <Txt kind="caption" muted>{plan.stored.note}</Txt> : null}
+          {plan.stored?.source !== "gemini" ? (
+            <Button
+              label={replanning ? "Gemini réfléchit…" : "Replanifier avec Gemini"}
+              kind="secondary"
+              small
+              disabled={replanning}
+              onPress={async () => {
+                setReplanning(true);
+                setReplanError(null);
+                await act(() => repo.replanSession(plan.item.sessionId, plan.date), setReplanError);
+                setReplanning(false);
+              }}
+            />
+          ) : null}
+          <ErrorText message={replanError} />
           {plan.exercises.map((e) => (
             <ExerciseRow key={e.id} e={e} planned={plan.stored?.date === plan.date ? plan.stored.exercises.find((p) => p.exerciseId === e.exerciseId) : undefined} />
           ))}
