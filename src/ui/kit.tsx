@@ -1,5 +1,6 @@
 import React from "react";
 import {
+  KeyboardAvoidingView,
   Modal,
   Pressable,
   ScrollView,
@@ -35,6 +36,15 @@ export function Txt({
   return <Text {...rest} style={[textStyles[kind], { color: muted ? c.inkMuted : c.ink }, style]} />;
 }
 
+/** Lifts its content above the keyboard, so the field being typed in stays visible. */
+export function KeyboardView({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  return (
+    <KeyboardAvoidingView behavior="padding" style={[{ flex: 1 }, style]}>
+      {children}
+    </KeyboardAvoidingView>
+  );
+}
+
 /** A tab screen: scrolling content under a big title, on the app surface. */
 export function Screen({
   title,
@@ -50,6 +60,7 @@ export function Screen({
   const c = useColors();
   const insets = useSafeAreaInsets();
   return (
+    <KeyboardView style={{ backgroundColor: c.surface }}>
     <ScrollView
       style={{ flex: 1, backgroundColor: c.surface }}
       contentContainerStyle={{ padding: space[4], paddingTop: insets.top + space[4], gap: space[5] }}
@@ -64,6 +75,7 @@ export function Screen({
       </View>
       {children}
     </ScrollView>
+    </KeyboardView>
   );
 }
 
@@ -207,7 +219,8 @@ export function Sheet({
   const c = useColors();
   const insets = useSafeAreaInsets();
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent navigationBarTranslucent onRequestClose={onClose}>
+      <KeyboardView>
       <Pressable style={{ flex: 1, backgroundColor: c.scrim }} onPress={onClose} accessibilityLabel="Fermer" />
       <View
         style={{
@@ -225,6 +238,7 @@ export function Sheet({
           {children}
         </ScrollView>
       </View>
+      </KeyboardView>
     </Modal>
   );
 }

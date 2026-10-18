@@ -4,7 +4,7 @@ import { useAction, useQuery, useStore } from "../data/RepoContext";
 import { ProgramDetail, SessionExercise, TrainingGoal } from "../data/repo";
 import { CYCLE_LABELS, CycleKind, slotCount, slotLabel } from "../domain/cycle";
 import { todayIso } from "../domain/dates";
-import { isIsoDate, plural, shortDate } from "../domain/format";
+import { formatFr, maskFr, parseFr, plural, shortDate } from "../domain/format";
 import { StartingSheet } from "./StartingSheet";
 import { Button, Card, Chip, ErrorText, Field, Row, Screen, Sheet, Txt } from "../ui/kit";
 import { space, useColors } from "../ui/theme";
@@ -169,12 +169,13 @@ function ProgramSheet({ visible, onClose }: { visible: boolean; onClose: () => v
   const { repo } = useStore();
   const [name, setName] = useState("");
   const [cycle, setCycle] = useState<CycleKind>("week");
-  const [start, setStart] = useState(todayIso());
+  const [start, setStart] = useState(formatFr(todayIso()));
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
-    if (!isIsoDate(start)) return setError("Date de début : utilise le format AAAA-MM-JJ.");
-    const ok = await act(() => repo.createProgram({ name, cycle, startDate: start }), setError);
+    const startDate = parseFr(start);
+    if (!startDate) return setError("Date de début : utilise le format JJ/MM/AAAA.");
+    const ok = await act(() => repo.createProgram({ name, cycle, startDate }), setError);
     if (ok) {
       setName("");
       setError(null);
@@ -193,7 +194,7 @@ function ProgramSheet({ visible, onClose }: { visible: boolean; onClose: () => v
           ))}
         </Row>
       </View>
-      <Field label="Début (AAAA-MM-JJ)" value={start} onChangeText={setStart} autoCapitalize="none" keyboardType="numbers-and-punctuation" />
+      <Field label="Début (JJ/MM/AAAA)" value={start} onChangeText={(t) => setStart(maskFr(t))} placeholder="JJ/MM/AAAA" keyboardType="number-pad" />
       <ErrorText message={error} />
       <Button label="Créer le programme" onPress={submit} />
     </Sheet>

@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import { Share, View } from "react-native";
+import { callGemini } from "../planner/geminiApi";
 import { clearGeminiKey, getGeminiKey, setGeminiKey } from "../config/geminiKey";
 import { exportCsv, exportJson, importJson } from "../data/backup";
 import { useAction, useStore } from "../data/RepoContext";
@@ -30,6 +31,23 @@ export function SettingsScreen() {
     }
   };
 
+  const [testing, setTesting] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const test = async () => {
+    setTesting(true);
+    setResult(null);
+    try {
+      const k = key.trim() || (await getGeminiKey());
+      if (!k) throw new Error("Aucune clé à tester.");
+      await callGemini(k, 'Reply with the JSON {"ok": true}');
+      setResult("La clé fonctionne.");
+    } catch (e) {
+      setResult(e instanceof Error ? e.message : String(e));
+    } finally {
+      setTesting(false);
+    }
+  };
+
   const remove = async () => {
     try {
       await clearGeminiKey();
@@ -51,6 +69,8 @@ export function SettingsScreen() {
       <View style={{ gap: 12 }}>
         <Field label="Clé API" value={key} onChangeText={setKey} placeholder="AIza…" secureTextEntry autoCapitalize="none" autoCorrect={false} />
         <ErrorText message={error} />
+        <Button label={testing ? "Test en cours…" : "Tester la clé"} kind="secondary" disabled={testing} onPress={test} />
+        {result ? <Txt kind="strong">{result}</Txt> : null}
         <Row wrap={false}>
           <Button label="Enregistrer" onPress={save} />
           {saved ? <Button label="Supprimer la clé" kind="secondary" onPress={remove} /> : null}

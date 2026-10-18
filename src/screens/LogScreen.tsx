@@ -8,7 +8,7 @@ import { todayIso } from "../domain/dates";
 import { longDate } from "../domain/format";
 import type { RootParams } from "../navigation";
 import { BODYWEIGHT, DEFAULT_RULES } from "../rules/rules";
-import { Button, Card, Chip, ErrorText, Field, Row, Sheet, Txt } from "../ui/kit";
+import { Button, Card, Chip, ErrorText, Field, KeyboardView, Row, Sheet, Txt } from "../ui/kit";
 import { radius, space, useColors } from "../ui/theme";
 import { GOAL_LABELS } from "./ProgramScreen";
 
@@ -54,6 +54,7 @@ export function LogScreen() {
   };
 
   return (
+    <KeyboardView style={{ backgroundColor: c.surface }}>
     <ScrollView
       style={{ flex: 1, backgroundColor: c.surface }}
       contentContainerStyle={{ padding: space[4], paddingTop: insets.top + space[4], paddingBottom: insets.bottom + space[8], gap: space[4] }}
@@ -108,6 +109,7 @@ export function LogScreen() {
         onClose={() => setEditing(null)}
       />
     </ScrollView>
+    </KeyboardView>
   );
 }
 

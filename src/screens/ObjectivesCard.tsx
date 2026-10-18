@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { useAction, useQuery, useStore } from "../data/RepoContext";
-import { shortDate } from "../domain/format";
+import { formatFr } from "../domain/format";
 import { Button, Card, ProgressBar, Txt } from "../ui/kit";
 import { space } from "../ui/theme";
 import { ObjectiveSheet } from "./ObjectiveSheet";
@@ -28,7 +28,7 @@ export function ObjectivesCard() {
             <Txt kind="strong" style={{ flex: 1 }}>
               {o.name} · {o.reps} reps
             </Txt>
-            <Txt kind="caption" muted>d'ici le {shortDate(o.byDate)} {o.byDate.slice(0, 4)}</Txt>
+            <Txt kind="caption" muted>d'ici le {formatFr(o.byDate)}</Txt>
           </View>
           <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
             <Txt kind="caption" muted>

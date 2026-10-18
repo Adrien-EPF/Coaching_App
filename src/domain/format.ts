@@ -24,6 +24,26 @@ export function isIsoDate(text: string): boolean {
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === text;
 }
 
+/** "2026-10-17" -> "17/10/2026" */
+export function formatFr(iso: IsoDate): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+/** "17/10/2026" -> "2026-10-17"; null when the text is not a real date. */
+export function parseFr(text: string): IsoDate | null {
+  const m = /^\s*(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})\s*$/.exec(text);
+  if (!m) return null;
+  const iso = `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return isIsoDate(iso) ? iso : null;
+}
+
+/** Types digits and the slashes come by themselves: "17102026" -> "17/10/2026". */
+export function maskFr(text: string): string {
+  const d = text.replace(/\D/g, "").slice(0, 8);
+  return [d.slice(0, 2), d.slice(2, 4), d.slice(4)].filter(Boolean).join("/");
+}
+
 export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;
 }

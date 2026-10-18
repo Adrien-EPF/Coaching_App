@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { maskFr, parseFr } from "../domain/format";
 import { useAction, useQuery, useStore } from "../data/RepoContext";
 import { Button, Chip, ErrorText, Field, Row, Sheet, Txt } from "../ui/kit";
 
@@ -26,7 +27,9 @@ export function ObjectiveSheet({ visible, onClose }: { visible: boolean; onClose
 
   const submit = async () => {
     if (exerciseId === null) return setError("Choisis un exercice.");
-    const ok = await act(() => repo.addObjective({ exerciseId, reps: toNumber(reps), weight: toNumber(weight), byDate: byDate.trim() }), setError);
+    const date = parseFr(byDate);
+    if (!date) return setError("La date doit être au format JJ/MM/AAAA.");
+    const ok = await act(() => repo.addObjective({ exerciseId, reps: toNumber(reps), weight: toNumber(weight), byDate: date }), setError);
     if (ok) onClose();
   };
 
@@ -40,7 +43,7 @@ export function ObjectiveSheet({ visible, onClose }: { visible: boolean; onClose
       </Row>
       <Field label="Reps visées" value={reps} onChangeText={setReps} keyboardType="number-pad" placeholder="5" />
       <Field label="Charge visée (kg)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" placeholder="10" />
-      <Field label="D'ici le" value={byDate} onChangeText={setByDate} placeholder="2027-03-01" autoCapitalize="none" autoCorrect={false} />
+      <Field label="D'ici le (JJ/MM/AAAA)" value={byDate} onChangeText={(t) => setByDate(maskFr(t))} placeholder="01/03/2027" keyboardType="number-pad" />
       <Txt kind="caption" muted>Gemini en tient compte comme contexte, sans jamais dépasser tes garde-fous.</Txt>
       <ErrorText message={error} />
       <Button label="Ajouter l'objectif" onPress={submit} />

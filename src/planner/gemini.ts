@@ -5,7 +5,7 @@ import { BODYWEIGHT, Rules } from "../rules/rules";
 export type Generate = (prompt: string) => Promise<string>;
 
 const NO_KEY = "Pas de clé Gemini : plan calculé avec tes règles seules.";
-const UNAVAILABLE = "Gemini indisponible ou réponse invalide : plan calculé avec tes règles seules.";
+const unavailable = (why: string) => `Gemini indisponible (${why}) : plan calculé avec tes règles seules.`;
 
 /** One Session Plan from Gemini, bounded by the Guardrails; the rules-only plan, labeled, on any failure or without a key. */
 export async function planWithGemini(rules: Rules, input: PlanInput, generate: Generate | null): Promise<SessionPlan> {
@@ -15,8 +15,8 @@ export async function planWithGemini(rules: Rules, input: PlanInput, generate: G
     const parsed = parsePlan(await generate(planPrompt(rules, input)), input.exercises);
     const exercises = input.exercises.map((e, i) => applyGuardrails(rules, input.date, e, parsed.exercises[i], noIncrease(rules, input)));
     return { exercises, summary: parsed.summary ?? planSession(rules, input).summary, source: "gemini", note: null };
-  } catch {
-    return rulesOnly(UNAVAILABLE);
+  } catch (e) {
+    return rulesOnly(unavailable(e instanceof Error ? e.message : "réponse invalide"));
   }
 }
 
@@ -141,7 +141,7 @@ export async function askForLoads(rules: Rules, kind: "estimate" | "test", reque
       return { exerciseId: req.exerciseId, weight: planned.weight, reps: planned.reps, sets: planned.sets, why };
     });
   } catch (e) {
-    throw new Error("Gemini n'a pas donné de réponse exploitable. Réessaie plus tard.", { cause: e });
+    throw new Error(`Gemini n'a pas donné de réponse exploitable (${e instanceof Error ? e.message : "réponse invalide"}). Réessaie plus tard.`, { cause: e });
   }
 }
 

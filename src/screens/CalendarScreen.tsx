@@ -5,7 +5,7 @@ import type { RootParams } from "../navigation";
 import { useAction, useQuery, useStore } from "../data/RepoContext";
 import { CalendarDay, CalendarItem } from "../data/repo";
 import { addDays, daysInMonth, IsoDate, mondayOf, todayIso, toIso, weekday } from "../domain/dates";
-import { isIsoDate, longDate, MONTHS, plural } from "../domain/format";
+import { formatFr, longDate, maskFr, MONTHS, parseFr, plural } from "../domain/format";
 import { Button, Card, Chip, ErrorText, Field, Row, Screen, Sheet, Txt } from "../ui/kit";
 import { fonts, radius, space, useColors } from "../ui/theme";
 
@@ -236,11 +236,12 @@ function MoveSheet({ item, date, today, onClose }: { item: Planned | null; date:
   const { repo } = useStore();
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const options = Array.from({ length: 7 }, (_, i) => addDays(date, i + 1));
+  // A week either side of the planned day, never before today and never the day itself.
+  const options = Array.from({ length: 15 }, (_, i) => addDays(date, i - 7)).filter((d) => d !== date && d >= today);
 
-  const move = async (to: string) => {
+  const move = async (to: IsoDate | null) => {
     if (!item) return;
-    if (!isIsoDate(to)) return setError("Utilise le format AAAA-MM-JJ.");
+    if (!to) return setError("Utilise le format JJ/MM/AAAA.");
     if (to < today) return setError("Choisis un jour qui n'est pas déjà passé.");
     if (await act(() => repo.moveSession(item.sessionId, date, to), setError)) {
       setText("");
@@ -254,12 +255,12 @@ function MoveSheet({ item, date, today, onClose }: { item: Planned | null; date:
       <Txt muted>{item?.name} · le programme ne change pas, seul ce jour est déplacé.</Txt>
       <Row>
         {options.map((d) => (
-          <Chip key={d} label={`${longDate(d).split(" ")[0].slice(0, 3)} ${Number(d.slice(8))}`} onPress={() => move(d)} />
+          <Chip key={d} label={`${longDate(d).split(" ")[0].slice(0, 3)} ${formatFr(d).slice(0, 5)}`} onPress={() => move(d)} />
         ))}
       </Row>
-      <Field label="Ou une autre date (AAAA-MM-JJ)" value={text} onChangeText={setText} autoCapitalize="none" keyboardType="numbers-and-punctuation" />
+      <Field label="Ou une autre date (JJ/MM/AAAA)" value={text} onChangeText={(t) => setText(maskFr(t))} placeholder="JJ/MM/AAAA" keyboardType="number-pad" />
       <ErrorText message={error} />
-      <Button label="Déplacer" onPress={() => move(text)} />
+      <Button label="Déplacer" onPress={() => move(parseFr(text))} />
     </Sheet>
   );
 }
