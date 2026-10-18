@@ -16,7 +16,7 @@ A personal Android app to track gym progress. After each session, Gemini and you
 ![Platform](https://img.shields.io/badge/PLATFORM-ANDROID-111410?style=for-the-badge&labelColor=111410&color=c6f432)
 ![Stack](https://img.shields.io/badge/EXPO-REACT%20NATIVE-111410?style=for-the-badge&labelColor=111410&color=c6f432)
 ![Data](https://img.shields.io/badge/DATA-LOCAL%20ONLY-111410?style=for-the-badge&labelColor=111410&color=c6f432)
-![Status](https://img.shields.io/badge/STATUS-IN%20DEVELOPMENT-111410?style=for-the-badge&labelColor=111410&color=f4f5f0)
+![Status](https://img.shields.io/badge/STATUS-V1%20DONE-111410?style=for-the-badge&labelColor=111410&color=c6f432)
 
 [Overview](#overview) &nbsp;·&nbsp; [How it works](#how-it-works) &nbsp;·&nbsp; [Features](#features) &nbsp;·&nbsp; [Progression rules](#progression-rules) &nbsp;·&nbsp; [Screens](#screens) &nbsp;·&nbsp; [Design](#design) &nbsp;·&nbsp; [Roadmap](#roadmap) &nbsp;·&nbsp; [Repository](#repository)
 
@@ -24,7 +24,7 @@ A personal Android app to track gym progress. After each session, Gemini and you
 
 <br>
 
-> **Status: in development** (app skeleton and Program calendar done). Vocabulary lives in [CONTEXT.md](./CONTEXT.md), progression rules in [RULES.md](./RULES.md), decisions in [docs/adr](./docs/adr), and the work is tracked in the [issues](https://github.com/Adrien-EPF/Coaching_App/issues).
+> **Status: v1 done.** All eleven slices are built and the app was tested on a real Android phone. See [Install](#install) to get the APK. Vocabulary lives in [CONTEXT.md](./CONTEXT.md), progression rules in [RULES.md](./RULES.md), decisions in [docs/adr](./docs/adr), and the work is tracked in the [issues](https://github.com/Adrien-EPF/Coaching_App/issues).
 
 <br>
 
@@ -265,29 +265,45 @@ Everything lives in [`Design/coaching-app`](./Design/coaching-app): the [design 
 
 ## Roadmap
 
-Work is tracked as issues, each one a thin end-to-end slice. Later slices depend on earlier ones.
+Work was tracked as issues, each one a thin end-to-end slice. Later slices depend on earlier ones. All of them are done.
 
 | | Slice | After |
 |:-:|---|:-:|
-| [#2](https://github.com/Adrien-EPF/Coaching_App/issues/2) | App skeleton and APK build | |
-| [#3](https://github.com/Adrien-EPF/Coaching_App/issues/3) | Program, Cycle and calendar | #2 |
-| [#4](https://github.com/Adrien-EPF/Coaching_App/issues/4) | Session logging and Validation | #3 |
-| [#5](https://github.com/Adrien-EPF/Coaching_App/issues/5) | Rules config and offline rules-only planner | #4 |
-| [#6](https://github.com/Adrien-EPF/Coaching_App/issues/6) | Gemini Session Plan with Guardrails | #5 |
-| [#7](https://github.com/Adrien-EPF/Coaching_App/issues/7) | Initial Weights, Test Session and Starting Estimates | #6 |
-| [#8](https://github.com/Adrien-EPF/Coaching_App/issues/8) | Problem Report and re-planning | #6 |
-| [#9](https://github.com/Adrien-EPF/Coaching_App/issues/9) | Personal Records and Estimated 1RM | #4 |
-| [#10](https://github.com/Adrien-EPF/Coaching_App/issues/10) | Objectives | #9 |
-| [#11](https://github.com/Adrien-EPF/Coaching_App/issues/11) | Adherence | #3, #4 |
-| [#12](https://github.com/Adrien-EPF/Coaching_App/issues/12) | Export and import | #4 |
+| [#2](https://github.com/Adrien-EPF/Coaching_App/issues/2) | ✓ App skeleton and APK build | |
+| [#3](https://github.com/Adrien-EPF/Coaching_App/issues/3) | ✓ Program, Cycle and calendar | #2 |
+| [#4](https://github.com/Adrien-EPF/Coaching_App/issues/4) | ✓ Session logging and Validation | #3 |
+| [#5](https://github.com/Adrien-EPF/Coaching_App/issues/5) | ✓ Rules config and offline rules-only planner | #4 |
+| [#6](https://github.com/Adrien-EPF/Coaching_App/issues/6) | ✓ Gemini Session Plan with Guardrails | #5 |
+| [#7](https://github.com/Adrien-EPF/Coaching_App/issues/7) | ✓ Initial Weights, Test Session and Starting Estimates | #6 |
+| [#8](https://github.com/Adrien-EPF/Coaching_App/issues/8) | ✓ Problem Report and re-planning | #6 |
+| [#9](https://github.com/Adrien-EPF/Coaching_App/issues/9) | ✓ Personal Records and Estimated 1RM | #4 |
+| [#10](https://github.com/Adrien-EPF/Coaching_App/issues/10) | ✓ Objectives | #9 |
+| [#11](https://github.com/Adrien-EPF/Coaching_App/issues/11) | ✓ Adherence | #3, #4 |
+| [#12](https://github.com/Adrien-EPF/Coaching_App/issues/12) | ✓ Export and import | #4 |
 
 The parent spec is [#1](https://github.com/Adrien-EPF/Coaching_App/issues/1), with the full list of 33 user stories.
 
-### Out of scope for v1
+### After the first real-world test
+
+Fixed after trying the app on a phone: the keyboard no longer hides fields, dates are typed as JJ/MM/AAAA, a Session can be moved earlier as well as later, a Problem Report can be withdrawn (the Session is planned again without it), pull down to refresh on every screen, and the real logo as launcher icon.
+
+Gemini needed three fixes: a current model (Google now keeps the 2.5 models for existing users only, so the app tries `gemini-3.8-flash`, then `gemini-3.6-flash`, then `gemini-2.5-flash`), the real reason shown when it fails (and a **Tester la clé** button in Réglages), and the Initial Weights sent to it, with the Guardrails bounding a first plan around them.
+
+### Out of scope for v1 (ideas for v2)
 
 Trend charts, volume and frequency objectives, rest timer, bodyweight tracking, automatic evening-before planning, cloud sync and accounts, iOS.
 
 <br>
+
+## Install
+
+The app is Android only and not on the Play Store. A GitHub Action builds the APK on every push to `main`.
+
+1. Open the latest successful run of **Build APK** in the [Actions](https://github.com/Adrien-EPF/Coaching_App/actions) tab, signed in to GitHub.
+2. Download the `coaching-app-apk` artifact (a zip), unzip it and open `app-release.apk` on the phone.
+3. Allow installing from unknown apps when Android asks (on Samsung, turn off Auto Blocker if the install is blocked).
+
+Uninstall the old version first if the icon does not update. That erases the local data, so export a JSON before.
 
 ## Setup
 
@@ -295,7 +311,8 @@ The Gemini key is free and stays on your device.
 
 1. Get a key at [Google AI Studio](https://aistudio.google.com/apikey).
 2. Copy `.env.example` to `.env` and put the key after `EXPO_PUBLIC_GEMINI_API_KEY=`. `.env` is git-ignored.
-3. The app reads a key entered in its settings first (kept in the device's secure storage), then falls back to `.env`. See [`src/config/geminiKey.ts`](./src/config/geminiKey.ts).
+3. In the app, **Réglages** has a **Tester la clé** button that shows Google's answer if the key is refused.
+4. The app reads a key entered in its settings first (kept in the device's secure storage), then falls back to `.env`. See [`src/config/geminiKey.ts`](./src/config/geminiKey.ts).
 
 A key set in `.env` is built into the APK, which is fine for a free key in a personal app. Do not share the APK.
 
