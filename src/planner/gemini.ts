@@ -31,12 +31,14 @@ function planPrompt(rules: Rules, input: PlanInput): string {
     prescribedSets: e.sets,
     trainingGoal: e.goal,
     equipment: e.equipment,
+    startingLoad: e.start ? { weight: e.start.weight, reps: e.start.reps } : null,
     history: historyFor(e),
   }));
   return [
     "You are the coach of a personal strength-training app. Plan the next Session: for each Exercise, the weight, reps and number of sets.",
     "The only aim is performance (more weight, more reps). Follow the Rules below. Your output is clamped by the Guardrails anyway.",
     "Weights are in kg, on loads the equipment can really make. A bodyweight Exercise has weight null.",
+    "An Exercise with an empty history but a `startingLoad` is new to the app: the startingLoad is what the athlete really lifts (their own Initial Weight or an approved estimate). Plan from it, close to that weight, never far below it. Never answer weight 0 for a weighted Exercise.",
     "Give a short `reason` (French) ONLY for an Exercise whose weight differs from its last working weight; otherwise null.",
     "Give one short `summary` line (French) about the whole Session.",
     `Answer with JSON only: {"summary": string, "exercises": [{"exerciseId": number, "weight": number|null, "reps": integer, "sets": integer, "reason": string|null}]}, one entry per Exercise.`,

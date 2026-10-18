@@ -45,6 +45,24 @@ function fake(answer: string | Error) {
 
 const reply = (exercises: object[], summary: string | undefined = "Séance un peu plus lourde") => JSON.stringify({ summary, exercises });
 
+describe("Gemini and the Initial Weights", () => {
+  const dips: ExerciseInput = { exerciseId: 3, name: "Dips", position: 1, sets: 4, goal: "strength", equipment: "barbell", history: [], start: { weight: 40, reps: 5 } };
+
+  it("sends the Initial Weight of an Exercise with no history", async () => {
+    const { generate, prompts } = fake(reply([{ exerciseId: 3, weight: 40, reps: 5, sets: 4, reason: null }]));
+    await planWithGemini(rules, { date: DATE, exercises: [dips] }, generate);
+    expect(prompts[0]).toContain('"startingLoad"');
+    expect(prompts[0]).toContain('"weight": 40');
+  });
+
+  it("keeps a wild answer close to the Initial Weight", async () => {
+    const { generate } = fake(reply([{ exerciseId: 3, weight: 0, reps: 5, sets: 4, reason: "x" }]));
+    const plan = await planWithGemini(rules, { date: DATE, exercises: [dips] }, generate);
+    expect(plan.exercises[0].weight).toBe(36);
+    expect(plan.exercises[0].warnings.join(" ")).toMatch(/Baisse limitée/);
+  });
+});
+
 describe("Gemini Session Plan", () => {
   it("turns valid Gemini JSON into the Session Plan", async () => {
     const { generate } = fake(

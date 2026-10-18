@@ -93,7 +93,8 @@ export function applyGuardrails(rules: Rules, date: IsoDate, ex: ExerciseInput, 
   const pause = base ? rules.special_cases.pause.find((x) => x.max_days === null || days <= x.max_days) : undefined;
   const equipment = rules.increments[ex.equipment] ?? FALLBACK_EQUIPMENT;
   const ctx: Context = {
-    lastWeight: base ? workingWeight(base) : null,
+    // No history yet: the Initial Weight or approved Starting Estimate is the athlete's known level, so it bounds the plan.
+    lastWeight: base ? workingWeight(base) : ex.start?.weight ?? null,
     equipment,
     bodyweight,
     goal: ex.goal,
