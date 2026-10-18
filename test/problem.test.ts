@@ -58,6 +58,18 @@ describe("Problem Report", () => {
     expect(prompts[0]).toContain("5 h de sommeil");
   });
 
+  it("withdraws a report and plans the Session again without its note", async () => {
+    await planNextMonday();
+    await repo.reportProblem(thuSession, THU, { kinds: ["Mauvais sommeil"], details: "5 h de sommeil" });
+    const [report] = await repo.getProblemReports(thuSession, THU);
+    prompts.length = 0;
+    const plan = await repo.removeProblemReport(report.id);
+    expect(plan).not.toBeNull();
+    expect(await repo.getProblemReports(thuSession, THU)).toEqual([]);
+    expect(prompts).toHaveLength(1);
+    expect(prompts[0]).not.toContain("Mauvais sommeil");
+  });
+
   it("lists the reports of an upcoming Session", async () => {
     await repo.reportProblem(thuSession, THU, { kinds: ["Douleur"], details: "Épaule" });
     expect(await repo.getProblemReports(thuSession, THU)).toMatchObject([{ kinds: ["Douleur"], details: "Épaule" }]);

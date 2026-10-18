@@ -117,6 +117,7 @@ export class Repo {
   /** Plans the Session again, with Gemini when there is a key (a plan stays as it was until then). */
   replanSession: Logbook["planSessionOn"] = (...a) => this.logbook.planSessionOn(...a);
   reportProblem: Logbook["reportProblem"] = (...a) => this.logbook.reportProblem(...a);
+  removeProblemReport: Logbook["removeProblemReport"] = (...a) => this.logbook.removeProblemReport(...a);
   getProblemReports: Logbook["getProblemReports"] = (...a) => this.logbook.getProblemReports(...a);
 
   // --- Objectives (see Objectives) ---

@@ -61,6 +61,7 @@ export function TodayScreen() {
             <Card key={r.id}>
               <Txt kind="caps" muted>Problème signalé</Txt>
               <Txt>{[r.kinds.join(", "), r.details].filter(Boolean).join(" · ")}</Txt>
+              <Button label="Annuler ce problème et replanifier" kind="secondary" small onPress={() => act(() => repo.removeProblemReport(r.id), setReplanError)} />
             </Card>
           ))}
           <Txt kind="caps" muted>Plan de la séance</Txt>
