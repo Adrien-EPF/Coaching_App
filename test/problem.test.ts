@@ -63,7 +63,8 @@ describe("Problem Report", () => {
     await repo.reportProblem(thuSession, THU, { kinds: ["Mauvais sommeil"], details: "5 h de sommeil" });
     const [report] = await repo.getProblemReports(thuSession, THU);
     prompts.length = 0;
-    const plan = await repo.removeProblemReport(report.id);
+    await repo.removeProblemReport(report.id);
+    const plan = await repo.replanSession(thuSession, THU);
     expect(plan).not.toBeNull();
     expect(await repo.getProblemReports(thuSession, THU)).toEqual([]);
     expect(prompts).toHaveLength(1);

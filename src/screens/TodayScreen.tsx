@@ -61,7 +61,21 @@ export function TodayScreen() {
             <Card key={r.id}>
               <Txt kind="caps" muted>Problème signalé</Txt>
               <Txt>{[r.kinds.join(", "), r.details].filter(Boolean).join(" · ")}</Txt>
-              <Button label="Annuler ce problème et replanifier" kind="secondary" small onPress={() => act(() => repo.removeProblemReport(r.id), setReplanError)} />
+              <Button
+                label={replanning ? "Replanification…" : "Annuler ce problème et replanifier"}
+                kind="secondary"
+                small
+                disabled={replanning}
+                onPress={async () => {
+                  setReplanning(true);
+                  setReplanError(null);
+                  // The card goes away at once; planning again can take a few seconds with Gemini.
+                  if (await act(() => repo.removeProblemReport(r.id), setReplanError)) {
+                    await act(() => repo.replanSession(plan.item.sessionId, plan.date), setReplanError);
+                  }
+                  setReplanning(false);
+                }}
+              />
             </Card>
           ))}
           <Txt kind="caps" muted>Plan de la séance</Txt>

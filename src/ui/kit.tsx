@@ -3,6 +3,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleProp,
   Text,
@@ -13,6 +14,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useStore } from "../data/RepoContext";
 import { fonts, radius, space, useColors } from "./theme";
 
 type TextKind = "title" | "heading" | "body" | "strong" | "caption" | "caps";
@@ -59,9 +61,18 @@ export function Screen({
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
+  const { changed } = useStore();
+  const [refreshing, setRefreshing] = React.useState(false);
+  // Pull down to reload: every screen re-reads its data after a write, and this is a write-free nudge.
+  const refresh = () => {
+    setRefreshing(true);
+    changed();
+    setTimeout(() => setRefreshing(false), 600);
+  };
   return (
     <KeyboardView style={{ backgroundColor: c.surface }}>
     <ScrollView
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={c.ink} colors={[c.ink]} progressBackgroundColor={c.surfaceRaised} />}
       style={{ flex: 1, backgroundColor: c.surface }}
       contentContainerStyle={{ padding: space[4], paddingTop: insets.top + space[4], gap: space[5] }}
       keyboardShouldPersistTaps="handled"

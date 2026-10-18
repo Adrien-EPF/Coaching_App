@@ -223,12 +223,9 @@ export class Logbook {
     return this.planSessionOn(programSessionId, date);
   }
 
-  /** Withdraws a Problem Report and plans the Session again without its note (the weights may go up again). */
-  async removeProblemReport(reportId: number): Promise<StoredPlan | null> {
-    const r = await first<{ program_session_id: number; date: IsoDate }>(this.db, "SELECT program_session_id, date FROM problem_report WHERE id = ?", [reportId]);
-    if (!r) throw new Error("Ce problème n'existe plus.");
+  /** Withdraws a Problem Report. The Session keeps its plan until it is planned again (`replanSession`). */
+  async removeProblemReport(reportId: number): Promise<void> {
     await this.db.run("DELETE FROM problem_report WHERE id = ?", [reportId]);
-    return this.planSessionOn(r.program_session_id, r.date);
   }
 
   async getProblemReports(programSessionId: number, date: IsoDate): Promise<ProblemReport[]> {
