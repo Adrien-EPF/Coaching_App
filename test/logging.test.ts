@@ -70,6 +70,23 @@ describe("logging a Session", () => {
     expect(exerciseNamed(await repo.getSessionLog(logId), "Traction").sets[0]).toMatchObject({ reps: 12, notCompleted: false });
   });
 
+  it("adds a Set to an Exercise, planned like its last one, in an open or a validated Session", async () => {
+    const logId = await repo.startSession(monSession, MON);
+    const squatId = exerciseNamed(await repo.getSessionLog(logId), "Squat").exerciseId;
+    await repo.addSet(logId, squatId);
+    let squat = exerciseNamed(await repo.getSessionLog(logId), "Squat");
+    expect(squat.sets.map((s) => s.index)).toEqual([0, 1, 2, 3, 4]);
+    expect((await repo.getSessionLog(logId)).remaining).toBe(8);
+
+    await logEverything(logId, { weight: 100, reps: 5, rpe: 8 });
+    await repo.validateSession(logId, TODAY);
+    await repo.addSet(logId, squatId);
+    squat = exerciseNamed(await repo.getSessionLog(logId), "Squat");
+    expect(squat.sets).toHaveLength(6);
+    await repo.editValidatedSet(squat.sets[5].id, { weight: 100, reps: 4, rpe: 9 }, TODAY);
+    expect(exerciseNamed(await repo.getSessionLog(logId), "Squat").sets[5].reps).toBe(4);
+  });
+
   it("logging a Set that was Not Completed makes it logged again", async () => {
     const logId = await repo.startSession(monSession, MON);
     const setId = exerciseNamed(await repo.getSessionLog(logId), "Squat").sets[0].id;

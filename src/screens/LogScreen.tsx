@@ -150,6 +150,7 @@ function ExerciseCard({
       {exercise.sets.map((s) => (
         <SetRow key={s.id} set={s} bodyweight={bodyweight} onPress={() => onEdit(s)} />
       ))}
+      <Button label="+ série" kind="secondary" small onPress={() => act(() => repo.addSet(logId, exercise.exerciseId))} />
     </Card>
   );
 }
