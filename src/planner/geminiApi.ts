@@ -1,7 +1,8 @@
 // Newest first. Google keeps older models for existing users only, so a new key can get a 404 on a retired one.
 const MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash"];
 const endpoint = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-const TIMEOUT_MS = 30_000;
+// A Session Plan prompt carries the whole history and Rules: it takes much longer than the key test.
+const TIMEOUT_MS = 90_000;
 
 /** One Gemini call. The key goes in the request header to Google and nowhere else. */
 export async function callGemini(key: string, prompt: string): Promise<string> {
@@ -42,6 +43,9 @@ async function callModel(key: string, model: string, prompt: string): Promise<st
     const text = body.candidates?.[0]?.content?.parts?.map((p) => p.text ?? "").join("");
     if (!text) throw new Error("Gemini: réponse vide");
     return text;
+  } catch (e) {
+    if (controller.signal.aborted) throw new Error(`Gemini n'a pas répondu en ${TIMEOUT_MS / 1000} s`);
+    throw e;
   } finally {
     clearTimeout(timer);
   }
