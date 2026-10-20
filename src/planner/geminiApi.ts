@@ -2,7 +2,7 @@
 const MODELS = ["gemini-3.8-flash", "gemini-3.6-flash", "gemini-2.5-flash"];
 const endpoint = (model: string) => `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 // A Session Plan prompt carries the whole history and Rules: it takes much longer than the key test.
-const TIMEOUT_MS = 90_000;
+const TIMEOUT_MS = 300_000;
 
 /** One Gemini call. The key goes in the request header to Google and nowhere else. */
 export async function callGemini(key: string, prompt: string): Promise<string> {
