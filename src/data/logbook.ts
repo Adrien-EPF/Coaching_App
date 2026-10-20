@@ -175,6 +175,21 @@ export class Logbook {
     return { id: log.id, programSessionId: log.program_session_id, name: log.name, date: log.date, status: log.status, exercises, remaining };
   }
 
+  /** Adds one more Set to an Exercise, planned like its last one. Works on a validated Session too: logging it then re-plans the next one. */
+  async addSet(logId: number, exerciseId: number): Promise<void> {
+    const last = await first<{ position: number; goal: string; set_index: number; planned_weight: number | null; planned_reps: number | null }>(
+      this.db,
+      "SELECT position, goal, set_index, planned_weight, planned_reps FROM set_log WHERE session_log_id = ? AND exercise_id = ? ORDER BY set_index DESC LIMIT 1",
+      [logId, exerciseId],
+    );
+    if (!last) throw new Error("Exercice introuvable dans cette séance.");
+    await this.db.run(
+      `INSERT INTO set_log (session_log_id, exercise_id, position, goal, set_index, planned_weight, planned_reps)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [logId, exerciseId, last.position, last.goal, last.set_index + 1, last.planned_weight, last.planned_reps],
+    );
+  }
+
   async logSet(setId: number, n: NumbersLogged): Promise<void> {
     await this.writeSet(await this.openSet(setId), n);
   }

@@ -107,6 +107,7 @@ export class Repo {
   // --- Session logging, Validation and planning (see Logbook) ---
   startSession: Logbook["startSession"] = (...a) => this.logbook.startSession(...a);
   getSessionLog: Logbook["getSessionLog"] = (...a) => this.logbook.getSessionLog(...a);
+  addSet: Logbook["addSet"] = (...a) => this.logbook.addSet(...a);
   logSet: Logbook["logSet"] = (...a) => this.logbook.logSet(...a);
   setSetNotCompleted: Logbook["setSetNotCompleted"] = (...a) => this.logbook.setSetNotCompleted(...a);
   setExerciseNotCompleted: Logbook["setExerciseNotCompleted"] = (...a) => this.logbook.setExerciseNotCompleted(...a);
