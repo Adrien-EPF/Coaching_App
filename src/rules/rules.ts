@@ -44,7 +44,8 @@ export interface Rules {
     pause: { max_days: number | null; decrease_pct: number }[];
     range_overshoot: { trigger: string; reps: number; new_load: string; capped_by_guardrail: boolean; rpe_brake_applies: boolean };
     bodyweight_no_load: { progression: string; reps_cap: number | null };
-    goal_change: { start_load: string; target_reps: string; safety_margin_pct: number; exempt_from_max_increase: boolean };
+    timed_hold: { progression: string; step_seconds: number };
+    goal_change: { start_load: string; target_reps: string; safety_margin_pct: { to_more_reps: number; to_fewer_reps: number }; exempt_from_max_increase: boolean };
     unplanned_session: { counts_for_progression: boolean; visible_to_gemini: boolean };
   };
   guardrails: {
@@ -65,6 +66,12 @@ export interface Rules {
 
 /** A movement with no load to progress (plain pull-up), as opposed to the keys of `increments`. */
 export const BODYWEIGHT = "bodyweight";
+
+/** A held position with no load (plank): the logged number is seconds, stored where reps are. */
+export const TIMED = "timed";
+
+/** No load to log or progress: plain bodyweight reps, or a hold timed in seconds. */
+export const hasNoLoad = (equipment: string) => equipment === BODYWEIGHT || equipment === TIMED;
 
 export const DEFAULT_RULES: Rules = {
   version: 1,
@@ -97,10 +104,11 @@ export const DEFAULT_RULES: Rules = {
       rpe_brake_applies: true,
     },
     bodyweight_no_load: { progression: "plus_one_rep_per_set", reps_cap: null },
+    timed_hold: { progression: "plus_step_seconds_per_set", step_seconds: 5 },
     goal_change: {
       start_load: "from_estimated_1rm_epley",
       target_reps: "new_range_bottom",
-      safety_margin_pct: 10,
+      safety_margin_pct: { to_more_reps: 30, to_fewer_reps: 10 },
       exempt_from_max_increase: true,
     },
     unplanned_session: { counts_for_progression: false, visible_to_gemini: true },
@@ -122,7 +130,7 @@ export const DEFAULT_RULES: Rules = {
       increase_pct: 5,
       max_rpe_to_increase: 9,
     },
-    hypertrophy: { reps_range: [6, 10], sets: [3, 3], increase_pct: 2.5, max_rpe_to_increase: 9 },
+    hypertrophy: { reps_range: [8, 12], sets: [3, 3], increase_pct: 2.5, max_rpe_to_increase: 9 },
     endurance: {
       reps_range: [12, 20],
       sets: [2, 3],

@@ -65,7 +65,7 @@ describe("double progression", () => {
       goal: "hypertrophy",
       equipment: "dumbbell",
       sets: 3,
-      history: [past("2026-10-12", [set(10, 10), set(10, 10), set(10, 10)], "hypertrophy")],
+      history: [past("2026-10-12", [set(10, 12), set(10, 12), set(10, 12)], "hypertrophy")],
     });
     expect(ex.weight).toBe(12);
   });
@@ -133,9 +133,9 @@ describe("range overshoot", () => {
       sets: 3,
       history: [past("2026-10-12", [set(50, 14), set(50, 8), set(50, 8)], "hypertrophy")],
     });
-    // Epley: 50 * (1 + 14/30) = 73.3 -> for 6 reps: 61 kg, capped at +10% = 55
+    // Epley: 50 * (1 + 14/30) = 73.3 -> for 8 reps: 58 kg, capped at +10% = 55
     expect(ex.weight).toBe(54);
-    expect(ex.reps).toBe(6);
+    expect(ex.reps).toBe(8);
     expect(ex.warnings.join(" ")).toMatch(/limit/i);
   });
 });
@@ -153,8 +153,66 @@ describe("bodyweight movements", () => {
   });
 });
 
+describe("timed holds", () => {
+  it("+5 seconds on the shortest Set, with no weight and no reps range", () => {
+    const { ex } = planOne({
+      equipment: "timed",
+      goal: "endurance",
+      sets: 3,
+      history: [past("2026-10-12", [set(0, 60), set(0, 50), set(0, 45)], "endurance")],
+    });
+    expect(ex.weight).toBeNull();
+    expect(ex.reps).toBe(50);
+  });
+
+  it("starts at 30 seconds with no history", () => {
+    const { ex } = planOne({ equipment: "timed", goal: "endurance", sets: 3 });
+    expect(ex).toMatchObject({ weight: null, reps: 30 });
+  });
+});
+
+describe("one history per Training Goal", () => {
+  const both = [
+    past("2026-10-17", [set(15, 8), set(15, 8), set(15, 8)], "hypertrophy"),
+    past("2026-10-13", [set(25, 3), set(25, 3), set(25, 3), set(25, 3)], "strength"),
+  ];
+
+  it("a strength Session builds on the last strength Session, not the newer hypertrophy one", () => {
+    const { ex } = planOne({ equipment: "weight_belt", history: both });
+    expect(ex).toMatchObject({ weight: 25, reps: 4 });
+  });
+
+  it("a hypertrophy Session builds on the last hypertrophy Session", () => {
+    const { ex } = planOne({ equipment: "weight_belt", goal: "hypertrophy", sets: 3, history: both });
+    expect(ex).toMatchObject({ weight: 15, reps: 9 });
+  });
+
+  it("a failure streak only counts Sessions of the same goal", () => {
+    const { ex } = planOne({
+      equipment: "weight_belt",
+      history: [
+        past("2026-10-17", [set(25, 8), set(25, 8), set(25, 8)], "hypertrophy"),
+        past("2026-10-13", [set(25, 2), set(25, 3), set(25, 3), set(25, 3)], "strength"),
+      ],
+    });
+    expect(ex.weight).toBe(25); // one failure in strength: retry, not a decrease
+  });
+});
+
 describe("goal change", () => {
-  it("starts from the Estimated 1RM with a 10% margin, ignoring the +10% cap", () => {
+  it("is capped neither up nor down: strength 25 kg x 3 gives a hypertrophy load from the e1RM", () => {
+    const { ex } = planOne({
+      goal: "hypertrophy",
+      equipment: "weight_belt",
+      sets: 3,
+      history: [past("2026-10-17", [set(25, 3), set(25, 3), set(25, 3)], "strength")],
+    });
+    // e1RM = 25 * 1.1 = 27.5 ; 8 reps -> 27.5 / 1.267 = 21.7 ; -30% margin (more reps) = 15.2 -> 15, below the -10% floor of 22.5
+    expect(ex.weight).toBe(15);
+    expect(ex.reps).toBe(8);
+  });
+
+  it("starts from the Estimated 1RM with a 10% margin (fewer reps), ignoring the +10% cap", () => {
     const { ex } = planOne({
       goal: "strength",
       history: [past("2026-10-12", [set(60, 10), set(60, 10), set(60, 10)], "hypertrophy")],

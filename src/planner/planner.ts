@@ -1,5 +1,5 @@
 import { diffDays, IsoDate } from "../domain/dates";
-import { BODYWEIGHT, EquipmentRules, GoalKey, Rules } from "../rules/rules";
+import { EquipmentRules, GoalKey, hasNoLoad, Rules, TIMED } from "../rules/rules";
 
 /** One logged Set as the planner sees it. A bodyweight Set may have no weight. */
 export interface LoggedSet {
@@ -30,6 +30,8 @@ export interface ExerciseInput {
   history: PastSession[];
   /** Initial Weight or approved Starting Estimate, used while there is no history. */
   start?: StartingLoad | null;
+  /** 1RM estimated by Gemini, when asked for: it replaces the formula when a new Training Goal restarts from the 1RM. */
+  oneRepMax?: number | null;
 }
 
 export interface StartingLoad {
@@ -87,9 +89,9 @@ export interface RawProposal {
 
 /** Bounds any proposal by the Guardrails; the reason survives only if the weight really changed. */
 export function applyGuardrails(rules: Rules, date: IsoDate, ex: ExerciseInput, p: RawProposal, noIncrease = false): PlannedExercise {
-  const bodyweight = ex.equipment === BODYWEIGHT;
-  const base = ex.history.find((h) => logged(h).length > 0);
-  const days = base ? diffDays(date, base.date) : 0;
+  const bodyweight = hasNoLoad(ex.equipment);
+  const base = baseSession(ex);
+  const days = base ? diffDays(date, latestSession(ex)!.date) : 0;
   const pause = base ? rules.special_cases.pause.find((x) => x.max_days === null || days <= x.max_days) : undefined;
   const equipment = rules.increments[ex.equipment] ?? FALLBACK_EQUIPMENT;
   const ctx: Context = {
@@ -99,7 +101,7 @@ export function applyGuardrails(rules: Rules, date: IsoDate, ex: ExerciseInput, 
     bodyweight,
     goal: ex.goal,
     longPause: !!pause && pause.decrease_pct > rules.guardrails.max_decrease_pct,
-    exemptFromIncreaseCap: !!base && base.goal !== ex.goal && rules.special_cases.goal_change.exempt_from_max_increase,
+    exemptFromCaps: !!base && base.goal !== ex.goal && rules.special_cases.goal_change.exempt_from_max_increase,
     noIncrease,
   };
   const weight = p.weight === null || bodyweight ? null : snap(equipment, p.weight, "nearest");
@@ -120,40 +122,45 @@ interface Context {
   goal: GoalKey;
   /** A long pause may be answered with the larger decrease. */
   longPause: boolean;
-  /** A change of Training Goal is not capped on the way up. */
-  exemptFromIncreaseCap: boolean;
+  /** A change of Training Goal is a different training: its first load is capped neither up nor down. */
+  exemptFromCaps: boolean;
   /** A Problem Report is on the Session: the weight may stay or go down, never up. */
   noIncrease: boolean;
 }
 
 const FALLBACK_EQUIPMENT: EquipmentRules = { min_step: 1 };
 
+/** Where a timed hold with no history starts, in seconds. */
+const DEFAULT_HOLD_SECONDS = 30;
+
 const epley = (weight: number, reps: number) => weight * (1 + reps / 30);
 const clean = (n: number) => Math.round(n * 1e6) / 1e6;
 const kg = (n: number) => `${String(clean(n)).replace(".", ",")} kg`;
 
 function planExercise(rules: Rules, date: IsoDate, ex: ExerciseInput, noIncrease: boolean): PlannedExercise {
-  const bodyweight = ex.equipment === BODYWEIGHT;
+  const bodyweight = hasNoLoad(ex.equipment);
+  const timed = ex.equipment === TIMED;
   const equipment = rules.increments[ex.equipment] ?? FALLBACK_EQUIPMENT;
   const [bottom, top] = progressionWindow(rules, ex.goal);
 
-  const base = ex.history.find((h) => logged(h).length > 0);
+  const base = baseSession(ex);
   const lastWeight = base ? workingWeight(base) : null;
-  const ctx: Context = { lastWeight, equipment, bodyweight, goal: ex.goal, longPause: false, exemptFromIncreaseCap: false, noIncrease };
+  const ctx: Context = { lastWeight, equipment, bodyweight, goal: ex.goal, longPause: false, exemptFromCaps: false, noIncrease };
 
   if (!base) {
     if (ex.start) {
       const weight = bodyweight || ex.start.weight === null ? null : snap(equipment, ex.start.weight, "nearest");
       return finish(rules, ctx, { weight, reps: ex.start.reps, sets: ex.sets, reason: null });
     }
-    return finish(rules, ctx, { weight: null, reps: bottom, sets: ex.sets, reason: null });
+    return finish(rules, ctx, { weight: null, reps: timed ? DEFAULT_HOLD_SECONDS : bottom, sets: ex.sets, reason: null });
   }
 
   const sets = logged(base);
   const lowest = Math.min(...sets.map((s) => s.reps!));
 
   if (bodyweight) {
-    return finish(rules, ctx, { weight: null, reps: lowest + 1, sets: ex.sets, reason: null });
+    const step = timed ? rules.special_cases.timed_hold.step_seconds : 1;
+    return finish(rules, ctx, { weight: null, reps: lowest + step, sets: ex.sets, reason: null });
   }
 
   const w = lastWeight ?? 0;
@@ -163,14 +170,16 @@ function planExercise(rules: Rules, date: IsoDate, ex: ExerciseInput, noIncrease
   // A new Training Goal restarts from the Estimated 1RM, with a safety margin.
   if (base.goal !== ex.goal) {
     const gc = rules.special_cases.goal_change;
-    const best = Math.max(...sets.map((s) => epley(s.weight ?? 0, s.reps!)));
-    const target = (best / (1 + bottom / 30)) * (1 - gc.safety_margin_pct / 100);
-    ctx.exemptFromIncreaseCap = gc.exempt_from_max_increase;
+    const best = ex.oneRepMax ?? Math.max(...sets.map((s) => epley(s.weight ?? 0, s.reps!)));
+    // Going to more reps is a bigger jump than going to fewer: the Epley estimate overshoots, so the margin is larger.
+    const margin = bottom > progressionWindow(rules, base.goal)[0] ? gc.safety_margin_pct.to_more_reps : gc.safety_margin_pct.to_fewer_reps;
+    const target = (best / (1 + bottom / 30)) * (1 - margin / 100);
+    ctx.exemptFromCaps = gc.exempt_from_max_increase;
     return finish(rules, ctx, proposal(snap(equipment, target, "nearest"), bottom, "Changement d'objectif : charge recalculée depuis l'1RM estimé."));
   }
 
   // Back after a pause: lighter, and restart from the bottom of the range.
-  const days = diffDays(date, base.date);
+  const days = diffDays(date, latestSession(ex)!.date);
   const pause = rules.special_cases.pause.find((p) => p.max_days === null || days <= p.max_days)!;
   if (pause.decrease_pct > 0) {
     ctx.longPause = pause.decrease_pct > rules.guardrails.max_decrease_pct;
@@ -181,7 +190,7 @@ function planExercise(rules: Rules, date: IsoDate, ex: ExerciseInput, noIncrease
   if (sets.some((s) => s.reps! < bottom)) {
     const f = rules.common.failure;
     let consecutive = 0;
-    for (const h of ex.history) {
+    for (const h of ex.history.filter((x) => x.goal === ex.goal)) {
       const ls = logged(h);
       if (ls.length === 0) continue;
       if (workingWeight(h) !== w || !ls.some((s) => s.reps! < bottom)) break;
@@ -231,18 +240,18 @@ function finish(rules: Rules, ctx: Context, p: Proposal): PlannedExercise {
       warnings.push("Pas de hausse : un problème est signalé sur cette séance.");
     }
     const step = ctx.equipment.min_step;
-    if (!ctx.exemptFromIncreaseCap) {
+    if (!ctx.exemptFromCaps) {
       const ceiling = snap(ctx.equipment, Math.max(clean(ctx.lastWeight * (1 + g.max_increase_pct / 100)), ctx.lastWeight + step), "down");
       if (weight > ceiling) {
         weight = ceiling;
         warnings.push(`Hausse limitée à +${g.max_increase_pct} % (Guardrail).`);
       }
-    }
-    const maxDecrease = ctx.longPause ? g.max_decrease_pct_after_long_pause : g.max_decrease_pct;
-    const floor = snap(ctx.equipment, clean(ctx.lastWeight * (1 - maxDecrease / 100)), "up");
-    if (weight < floor) {
-      weight = floor;
-      warnings.push(`Baisse limitée à -${maxDecrease} % (Guardrail).`);
+      const maxDecrease = ctx.longPause ? g.max_decrease_pct_after_long_pause : g.max_decrease_pct;
+      const floor = snap(ctx.equipment, clean(ctx.lastWeight * (1 - maxDecrease / 100)), "up");
+      if (weight < floor) {
+        weight = floor;
+        warnings.push(`Baisse limitée à -${maxDecrease} % (Guardrail).`);
+      }
     }
   }
 
@@ -261,6 +270,19 @@ function finish(rules: Rules, ctx: Context, p: Proposal): PlannedExercise {
 
   const changed = weight !== null && ctx.lastWeight !== null && clean(weight) !== clean(ctx.lastWeight);
   return { exerciseId: 0, weight: weight === null ? null : clean(weight), reps, sets, reason: changed ? p.reason : null, warnings };
+}
+
+/** The latest Session of the Exercise, whatever its Training Goal: it tells how long the athlete has been away. */
+function latestSession(ex: ExerciseInput): PastSession | undefined {
+  return ex.history.find((h) => logged(h).length > 0);
+}
+
+/**
+ * The Session the next one builds on: the latest one done with the same Training Goal, since each goal progresses on its own.
+ * Only an Exercise never done with this goal falls back to its other goal, to start from there.
+ */
+function baseSession(ex: ExerciseInput): PastSession | undefined {
+  return ex.history.find((h) => h.goal === ex.goal && logged(h).length > 0) ?? latestSession(ex);
 }
 
 function progressionWindow(rules: Rules, goal: GoalKey): [number, number] {
@@ -292,7 +314,7 @@ function summarize(inputs: ExerciseInput[], planned: PlannedExercise[]): string 
   let up = 0;
   let down = 0;
   planned.forEach((p, i) => {
-    const h = inputs[i].history.find((s) => logged(s).length > 0);
+    const h = baseSession(inputs[i]);
     const before = h ? workingWeight(h) : null;
     if (p.weight === null || before === null) return;
     if (p.weight > before) up++;

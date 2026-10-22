@@ -1,8 +1,8 @@
 import { addDays, IsoDate } from "../domain/dates";
 import { estimateOneRepMax, LiftedSet, PersonalRecord, personalRecords } from "../domain/records";
-import { Generate, planWithGemini } from "../planner/gemini";
+import { askForOneRepMaxes, Generate, OneRmRequest, planWithGemini } from "../planner/gemini";
 import { ExerciseInput, PastSession, SessionPlan, planSession } from "../planner/planner";
-import { BODYWEIGHT, GoalKey, Rules } from "../rules/rules";
+import { GoalKey, hasNoLoad, Rules, TIMED } from "../rules/rules";
 import { Db, first } from "./db";
 import { objectiveNote } from "./objectives";
 import type { Repo } from "./repo";
@@ -59,7 +59,9 @@ export interface StoredPlan {
   exercises: {
     exerciseId: number;
     name: string;
+    equipment: string;
     weight: number | null;
+    /** Seconds for a timed Exercise. */
     reps: number;
     sets: number;
     reason: string | null;
@@ -79,6 +81,8 @@ export interface ExerciseProgress {
   name: string;
   records: PersonalRecord[];
   estimatedOneRepMax: number;
+  /** The 1RM Gemini estimated for this Exercise, when asked for. */
+  geminiOneRepMax: { value: number; why: string; estimatedAt: string } | null;
 }
 
 interface SetRow {
@@ -195,9 +199,11 @@ export class Logbook {
   }
 
   private async writeSet(row: SetRow, n: NumbersLogged): Promise<void> {
-    if (!Number.isInteger(n.reps) || n.reps < 1) throw new Error("Les reps doivent être un entier d'au moins 1.");
+    if (!Number.isInteger(n.reps) || n.reps < 1) {
+      throw new Error(row.equipment === TIMED ? "La durée doit être un nombre entier de secondes, d'au moins 1." : "Les reps doivent être un entier d'au moins 1.");
+    }
     if (!(n.rpe >= 1 && n.rpe <= 10) || n.rpe * 2 !== Math.round(n.rpe * 2)) throw new Error("Le RPE va de 1 à 10, par demi-point.");
-    if (row.equipment !== BODYWEIGHT && (n.weight === null || !Number.isFinite(n.weight) || n.weight < 0)) {
+    if (!hasNoLoad(row.equipment) && (n.weight === null || !Number.isFinite(n.weight) || n.weight < 0)) {
       throw new Error("Indique la charge.");
     }
     await this.db.run("UPDATE set_log SET weight = ?, reps = ?, rpe = ?, not_completed = 0 WHERE id = ?", [n.weight, n.reps, n.rpe, row.id]);
@@ -287,8 +293,8 @@ export class Logbook {
       [programSessionId],
     );
     if (!head) return null;
-    const rows = await this.db.all<{ exercise_id: number; name: string; weight: number | null; reps: number; sets: number; reason: string | null; warnings: string }>(
-      `SELECT p.*, e.name FROM plan_exercise p JOIN exercise e ON e.id = p.exercise_id
+    const rows = await this.db.all<{ exercise_id: number; name: string; equipment: string; weight: number | null; reps: number; sets: number; reason: string | null; warnings: string }>(
+      `SELECT p.*, e.name, e.equipment FROM plan_exercise p JOIN exercise e ON e.id = p.exercise_id
         JOIN session_exercise se ON se.exercise_id = p.exercise_id AND se.program_session_id = p.program_session_id
         WHERE p.program_session_id = ? ORDER BY se.position`,
       [programSessionId],
@@ -302,6 +308,7 @@ export class Logbook {
       exercises: rows.map((r) => ({
         exerciseId: r.exercise_id,
         name: r.name,
+        equipment: r.equipment,
         weight: r.weight,
         reps: r.reps,
         sets: r.sets,
@@ -327,12 +334,39 @@ export class Logbook {
       entry.sets.push({ weight: r.weight, reps: r.reps, date: r.date });
       byExercise.set(r.exercise_id, entry);
     }
-    return [...byExercise].map(([exerciseId, { name, sets }]) => ({
-      exerciseId,
-      name,
-      records: personalRecords(sets),
-      estimatedOneRepMax: Math.max(...sets.map((s) => estimateOneRepMax(s.weight, s.reps))),
-    }));
+    const stored = await this.db.all<{ exercise_id: number; value: number; why: string; estimated_at: string }>("SELECT * FROM one_rm_estimate");
+    return [...byExercise].map(([exerciseId, { name, sets }]) => {
+      const g = stored.find((x) => x.exercise_id === exerciseId);
+      return {
+        exerciseId,
+        name,
+        records: personalRecords(sets),
+        estimatedOneRepMax: Math.max(...sets.map((s) => estimateOneRepMax(s.weight, s.reps))),
+        geminiOneRepMax: g ? { value: g.value, why: g.why, estimatedAt: g.estimated_at } : null,
+      };
+    });
+  }
+
+  /** Asks Gemini for the 1RM of every Exercise with a lifted load, and keeps the answers. Returns how many were stored. */
+  async estimateOneRepMaxesWithGemini(today: IsoDate): Promise<number> {
+    const rows = await this.db.all<{ exercise_id: number; name: string; equipment: string; goal: string; weight: number; reps: number; rpe: number | null; date: IsoDate }>(
+      `SELECT s.exercise_id, e.name, e.equipment, s.goal, s.weight, s.reps, s.rpe, sl.date
+         FROM set_log s JOIN session_log sl ON sl.id = s.session_log_id JOIN exercise e ON e.id = s.exercise_id
+        WHERE sl.status = 'validated' AND s.not_completed = 0 AND s.reps IS NOT NULL AND s.weight > 0
+        ORDER BY sl.date DESC, s.id DESC`,
+    );
+    const byExercise = new Map<number, OneRmRequest>();
+    for (const r of rows) {
+      const req = byExercise.get(r.exercise_id) ?? { exerciseId: r.exercise_id, name: r.name, equipment: r.equipment, sets: [] };
+      req.sets.push({ date: r.date, weight: r.weight, reps: r.reps, rpe: r.rpe, goal: r.goal });
+      byExercise.set(r.exercise_id, req);
+    }
+    if (byExercise.size === 0) throw new Error("Aucune série validée avec une charge : rien à estimer pour l'instant.");
+    const estimates = await askForOneRepMaxes([...byExercise.values()], await this.gemini());
+    for (const e of estimates) {
+      await this.db.run("INSERT OR REPLACE INTO one_rm_estimate (exercise_id, value, why, estimated_at) VALUES (?, ?, ?, ?)", [e.exerciseId, e.oneRepMax, e.why, today]);
+    }
+    return estimates.length;
   }
 
   // --- planning ---
@@ -363,6 +397,7 @@ export class Logbook {
         equipment: e.equipment,
         history: await this.history(e.exerciseId, 6),
         start,
+        oneRepMax: (await first<{ value: number }>(this.db, "SELECT value FROM one_rm_estimate WHERE exercise_id = ?", [e.exerciseId]))?.value ?? null,
       });
     }
     const reports = await this.getProblemReports(programSessionId, date);

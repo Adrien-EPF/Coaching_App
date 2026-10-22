@@ -206,7 +206,7 @@ describe("planning the next Session on Validation", () => {
     const first = await repo.startSession(monSession, MON);
     const log = await repo.getSessionLog(first);
     for (const s of exerciseNamed(log, "Squat").sets) await repo.logSet(s.id, { weight: 100, reps: 5, rpe: 8 });
-    for (const s of exerciseNamed(log, "Curl").sets) await repo.logSet(s.id, { weight: 10, reps: 10, rpe: 8 });
+    for (const s of exerciseNamed(log, "Curl").sets) await repo.logSet(s.id, { weight: 10, reps: 12, rpe: 8 });
     await repo.validateSession(first, TODAY);
 
     // Next Monday's Session is planned when Thursday's is validated, so plan it directly through the Thursday log.
@@ -225,7 +225,7 @@ describe("planning the next Session on Validation", () => {
     // Starting that Session pre-fills the planned values on every Set.
     const next = await repo.getSessionLog(await repo.startSession(monSession, NEXT_MON));
     expect(exerciseNamed(next, "Squat").sets.every((s) => s.plannedWeight === 106 && s.plannedReps === 3)).toBe(true);
-    expect(exerciseNamed(next, "Curl").sets[0]).toMatchObject({ plannedWeight: 12, plannedReps: 6 });
+    expect(exerciseNamed(next, "Curl").sets[0]).toMatchObject({ plannedWeight: 12, plannedReps: 8 });
     expect(exerciseNamed(next, "Squat").sets[0].last).toEqual({ weight: 100, reps: 5, rpe: 8 });
   });
 

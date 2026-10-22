@@ -48,7 +48,7 @@ The act of closing a finished **Session**. It triggers the **Session Plan** for 
 A note attached to an upcoming **Session** (e.g. bad sleep) that is passed to Gemini when its **Session Plan** is regenerated. Deviations from the plan (4 reps instead of 5) are not reported separately: you log what you did and the gap is the signal.
 
 **Estimated 1RM**:
-A one-rep-max estimate computed from your logged **Sets** for an **Exercise**, on the weight lifted only (for a weighted pull-up, the added load, never bodyweight). Shown next to the **PRs**.
+A one-rep-max estimate computed from your logged **Sets** for an **Exercise**, on the weight lifted only (for a weighted pull-up, the added load, never bodyweight). Shown next to the **PRs**. A button can ask Gemini for a more precise estimate per **Exercise**, which is then shown beside the formula and used when an **Exercise** restarts in a new **Training Goal**.
 
 **Guardrail**:
 A hard limit in the **Rules** (e.g. max +5% per session) that clamps any **Recommendation**, whatever Gemini says.

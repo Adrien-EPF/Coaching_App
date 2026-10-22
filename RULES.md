@@ -58,14 +58,18 @@ Reps atteintes mais à un RPE trop haut (au-dessus du maximum de l'objectif, sur
 
 **Exercices au poids du corps.** La version sans lest et la version lestée sont deux **Exercises** distincts (ex. tractions et tractions lestées). Sans lest, il n'y a pas de charge à monter : on vise +1 rep par **Set** à chaque **Session**, sans plafond, et la fourchette de l'objectif n'est qu'un repère.
 
-**Changement d'objectif.** Quand un **Exercise** passe à un autre **Training Goal** (ex. hypertrophie vers force), la charge de départ est calculée depuis l'**Estimated 1RM** pour le bas de la nouvelle fourchette, moins 10 % de marge. Ce premier calcul n'est pas limité par la hausse max des Guardrails.
+**Exercices en durée (gainage, tenues).** Un **Exercise** de type « durée » n'a ni charge ni reps : on saisit des secondes. On vise +5 secondes par **Set** à chaque **Session**, sans plafond, sur la plus courte **Set** de la dernière **Session**. La fourchette de reps et le RPE de l'objectif ne s'appliquent pas.
+
+**Un historique par objectif.** Chaque **Training Goal** progresse sur son propre historique : une séance de force s'appuie sur la dernière séance de force de l'**Exercise** (charge, reps, échecs), une séance d'hypertrophie sur la dernière séance d'hypertrophie. Les deux restent visibles de Gemini, qui peut en tenir compte, sans dépasser les Guardrails. La pause se mesure depuis la dernière séance de l'**Exercise**, quel que soit l'objectif.
+
+**Premier passage à un nouvel objectif.** Quand un **Exercise** n'a encore jamais été fait avec son **Training Goal** et passe à un autre **Training Goal** (ex. force vers hypertrophie, ou l'inverse), la charge de départ est calculée depuis l'**Estimated 1RM** pour le bas de la nouvelle fourchette, moins une marge : **30 %** quand on passe à plus de reps (ex. force vers hypertrophie : l'estimation Epley surestime alors beaucoup), **10 %** quand on passe à moins de reps. Force et Hypertrophie sont deux entraînements distincts : ce premier calcul n'est limité ni par la hausse max ni par la baisse max des Guardrails.
 
 **Séances hors programme.** Une **Unplanned Session** sert seulement d'information : Gemini la voit (fatigue, PR), mais elle ne déclenche ni hausse ni échec.
 
 ### Guardrails (limites dures)
 - Hausse max : **+10 %** par **Session** et par **Exercise** (ou le plus petit incrément si +10 % est en dessous).
 - Baisse max : **-10 %**, sauf reprise après plus de 4 semaines de pause (-20 %).
-- Exceptions : la charge de départ après un changement d'objectif, et les reps sans plafond des exercices au poids du corps.
+- Exceptions : la charge de départ après un changement d'objectif (hausse et baisse), et les reps ou secondes sans plafond des exercices au poids du corps.
 - Reps et nombre de **Sets** toujours dans les bornes de l'objectif.
 - Si Gemini échoue, l'app applique ces règles seules.
 
@@ -77,7 +81,7 @@ Reps atteintes mais à un RPE trop haut (au-dessus du maximum de l'objectif, sur
 
 ## Hypertrophy (Hypertrophie)
 L'hypertrophie sert à construire du muscle pour soulever plus lourd ensuite.
-- Reps : **6-10**.
+- Reps : **8-12**.
 - **Sets** : **3**.
 - Saut de charge : **+2,5 %**.
 - RPE max pour monter : **9**.
@@ -138,11 +142,14 @@ special_cases:
   bodyweight_no_load:           # version sans lest = Exercise distinct de la version lestée
     progression: plus_one_rep_per_set
     reps_cap: null
+  timed_hold:                   # gainage et autres tenues : la valeur saisie est en secondes
+    progression: plus_step_seconds_per_set
+    step_seconds: 5
   goal_change:
     start_load: from_estimated_1rm_epley
     target_reps: new_range_bottom
-    safety_margin_pct: 10
-    exempt_from_max_increase: true
+    safety_margin_pct: {to_more_reps: 30, to_fewer_reps: 10}
+    exempt_from_max_increase: true   # vaut aussi pour la baisse : Force et Hypertrophie sont deux entraînements distincts
   unplanned_session:
     counts_for_progression: false
     visible_to_gemini: true
@@ -164,7 +171,7 @@ goals:
     increase_pct: 5
     max_rpe_to_increase: 9
   hypertrophy:
-    reps_range: [6, 10]
+    reps_range: [8, 12]
     sets: [3, 3]
     increase_pct: 2.5
     max_rpe_to_increase: 9

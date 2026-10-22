@@ -131,6 +131,15 @@ const MIGRATIONS: string[] = [
     by_date TEXT NOT NULL
   );
   `,
+  `
+  -- A 1RM estimated by Gemini for an Exercise, from its logged Sets: more precise than a single formula.
+  CREATE TABLE one_rm_estimate (
+    exercise_id INTEGER PRIMARY KEY REFERENCES exercise(id) ON DELETE CASCADE,
+    value REAL NOT NULL CHECK (value > 0),
+    why TEXT NOT NULL DEFAULT '',
+    estimated_at TEXT NOT NULL
+  );
+  `,
 ];
 
 export async function migrate(db: Db): Promise<void> {

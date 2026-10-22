@@ -6,6 +6,7 @@ import { SessionExercise, StoredPlan } from "../data/repo";
 import { addDays, todayIso } from "../domain/dates";
 import { longDate, plural } from "../domain/format";
 import type { RootParams } from "../navigation";
+import { TIMED } from "../rules/rules";
 import { Button, Card, ErrorText, Screen, Txt } from "../ui/kit";
 import { space } from "../ui/theme";
 import { GOAL_LABELS } from "./ProgramScreen";
@@ -127,7 +128,7 @@ function ExerciseRow({ e, planned }: { e: SessionExercise; planned?: StoredPlan[
           {planned ? (
             <Txt kind="caption">
               Prévu : {planned.weight === null ? "" : `${String(planned.weight).replace(".", ",")} kg · `}
-              {planned.sets} × {planned.reps}
+              {planned.sets} × {planned.equipment === TIMED ? `${planned.reps} s` : planned.reps}
             </Txt>
           ) : null}
           {planned?.warnings.map((w) => (

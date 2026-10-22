@@ -5,6 +5,7 @@ import { useAction, useStore } from "../data/RepoContext";
 import type { Estimate, NewExercise } from "../data/repo";
 import { todayIso } from "../domain/dates";
 import type { RootParams } from "../navigation";
+import { hasNoLoad, TIMED } from "../rules/rules";
 import { Button, Card, Chip, ErrorText, Field, Row, Sheet, Txt } from "../ui/kit";
 import { space } from "../ui/theme";
 import { GOAL_LABELS } from "./ProgramScreen";
@@ -98,13 +99,13 @@ export function StartingSheet({ visible, onClose, exercises }: { visible: boolea
                 <Txt kind="strong">{e.name}</Txt>
                 <Txt kind="caption" muted>{GOAL_LABELS[e.goal]} · place {e.position} sur {e.sessionSize}</Txt>
                 <Row wrap={false}>
-                  {e.equipment !== "bodyweight" && (
+                  {!hasNoLoad(e.equipment) && (
                     <View style={{ flex: 1 }}>
                       <Field label="Charge (kg)" value={d.weight} onChangeText={(t) => setDraft(e.exerciseId, { weight: t }, d)} keyboardType="decimal-pad" />
                     </View>
                   )}
                   <View style={{ flex: 1 }}>
-                    <Field label="Reps" value={d.reps} onChangeText={(t) => setDraft(e.exerciseId, { reps: t }, d)} keyboardType="number-pad" />
+                    <Field label={e.equipment === TIMED ? "Durée (s)" : "Reps"} value={d.reps} onChangeText={(t) => setDraft(e.exerciseId, { reps: t }, d)} keyboardType="number-pad" />
                   </View>
                 </Row>
               </Card>
