@@ -114,6 +114,7 @@ export class Repo {
   validateSession: Logbook["validateSession"] = (...a) => this.logbook.validateSession(...a);
   getPlan: Logbook["getPlan"] = (...a) => this.logbook.getPlan(...a);
   getProgress: Logbook["getProgress"] = (...a) => this.logbook.getProgress(...a);
+  estimateOneRepMaxesWithGemini: Logbook["estimateOneRepMaxesWithGemini"] = (...a) => this.logbook.estimateOneRepMaxesWithGemini(...a);
   editValidatedSet: Logbook["editValidatedSet"] = (...a) => this.logbook.editValidatedSet(...a);
   /** Plans the Session again, with Gemini when there is a key (a plan stays as it was until then). */
   replanSession: Logbook["planSessionOn"] = (...a) => this.logbook.planSessionOn(...a);

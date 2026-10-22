@@ -1,6 +1,6 @@
 import { addDays, IsoDate } from "../domain/dates";
 import { askForLoads, Generate, LoadRequest, ProposedLoad } from "../planner/gemini";
-import { BODYWEIGHT, GoalKey, Rules } from "../rules/rules";
+import { GoalKey, hasNoLoad, Rules } from "../rules/rules";
 import { Db, first } from "./db";
 import type { Logbook } from "./logbook";
 import type { Repo } from "./repo";
@@ -83,7 +83,7 @@ export class Starting {
       const ex = await first<{ equipment: string }>(this.db, "SELECT equipment FROM exercise WHERE id = ?", [e.exerciseId]);
       if (!ex) throw new Error("Exercice introuvable.");
       if (!Number.isInteger(e.reps) || e.reps < 1) throw new Error("Les reps doivent être un entier d'au moins 1.");
-      const bodyweight = ex.equipment === BODYWEIGHT;
+      const bodyweight = hasNoLoad(ex.equipment);
       if (!bodyweight && (e.weight === null || !Number.isFinite(e.weight) || e.weight < 0)) throw new Error("Indique la charge.");
     }
     for (const e of entries) {

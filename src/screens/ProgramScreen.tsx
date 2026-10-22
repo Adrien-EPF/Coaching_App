@@ -22,6 +22,7 @@ export const EQUIPMENT_LABELS: Record<string, string> = {
   cable: "Poulie",
   weight_belt: "Ceinture de lest",
   bodyweight: "Poids du corps",
+  timed: "Durée (gainage)",
 };
 
 export function ProgramScreen() {

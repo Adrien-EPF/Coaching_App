@@ -1,5 +1,5 @@
 import { applyGuardrails, ExerciseInput, noIncrease, PastSession, PlanInput, planSession, PlannedExercise, SessionPlan } from "./planner";
-import { BODYWEIGHT, Rules } from "../rules/rules";
+import { hasNoLoad, Rules } from "../rules/rules";
 
 /** The seam to Gemini: a prompt in, the model's raw text out. Tests plug a fake in here. */
 export type Generate = (prompt: string) => Promise<string>;
@@ -32,12 +32,15 @@ function planPrompt(rules: Rules, input: PlanInput): string {
     trainingGoal: e.goal,
     equipment: e.equipment,
     startingLoad: e.start ? { weight: e.start.weight, reps: e.start.reps } : null,
+    estimatedOneRepMax: e.oneRepMax ?? null,
     history: historyFor(e),
   }));
   return [
     "You are the coach of a personal strength-training app. Plan the next Session: for each Exercise, the weight, reps and number of sets.",
     "The only aim is performance (more weight, more reps). Follow the Rules below. Your output is clamped by the Guardrails anyway.",
     "Weights are in kg, on loads the equipment can really make. A bodyweight Exercise has weight null.",
+    "A \"timed\" Exercise (plank, holds) has weight null and its `reps` are SECONDS of hold, not repetitions: ignore the reps range of the Training Goal and progress the seconds (see special_cases.timed_hold).",
+    "Each Training Goal has its own progression: plan from the history done with the Exercise's current trainingGoal (it is mostly what counts). The history of the other goal is context only; use it only when the Exercise has never been done with the current goal.",
     "An Exercise with an empty history but a `startingLoad` is new to the app: the startingLoad is what the athlete really lifts (their own Initial Weight or an approved estimate). Plan from it, close to that weight, never far below it. Never answer weight 0 for a weighted Exercise.",
     "Give a short `reason` (French) ONLY for an Exercise whose weight differs from its last working weight; otherwise null.",
     "Give one short `summary` line (French) about the whole Session.",
@@ -173,6 +176,61 @@ function loadsPrompt(rules: Rules, kind: "estimate" | "test", requests: LoadRequ
   ].join("\n\n");
 }
 
+// --- Estimated 1RM ---
+
+export interface OneRmRequest {
+  exerciseId: number;
+  name: string;
+  equipment: string;
+  /** Validated working Sets with a load, newest first. For weighted bodyweight movements the weight is the added load. */
+  sets: { date: string; weight: number; reps: number; rpe: number | null; goal: string }[];
+}
+
+export interface OneRmEstimate {
+  exerciseId: number;
+  /** kg, on the lifted load only. */
+  oneRepMax: number;
+  why: string;
+}
+
+const heaviest = (r: OneRmRequest) => Math.max(...r.sets.map((s) => s.weight));
+const epleyBest = (r: OneRmRequest) => Math.max(...r.sets.map((s) => (s.reps <= 1 ? s.weight : s.weight * (1 + s.reps / 30))));
+
+/**
+ * Asks Gemini for the 1RM of each Exercise, from its logged Sets. Throws a readable error: it is an explicit action.
+ * The answer is clamped: never under the heaviest weight really lifted, never far above the Epley estimate.
+ */
+export async function askForOneRepMaxes(requests: OneRmRequest[], generate: Generate | null): Promise<OneRmEstimate[]> {
+  if (!generate) throw new Error("Ajoute ta clé Gemini dans les réglages pour utiliser cette option.");
+  if (requests.length === 0) return [];
+  try {
+    const list = (parseJson(await generate(oneRmPrompt(requests))) as { estimates?: unknown }).estimates;
+    if (!Array.isArray(list)) throw new Error("estimates");
+    const byId = new Map<number, unknown>();
+    for (const item of list) byId.set(asRecord(item).exerciseId as number, item);
+    return requests.map((req) => {
+      const r = asRecord(byId.get(req.exerciseId));
+      if (typeof r.oneRepMax !== "number" || !Number.isFinite(r.oneRepMax) || r.oneRepMax <= 0) throw new Error("not a weight");
+      const oneRepMax = Math.round(Math.min(epleyBest(req) * 1.3, Math.max(heaviest(req), r.oneRepMax)) * 10) / 10;
+      return { exerciseId: req.exerciseId, oneRepMax, why: typeof r.why === "string" ? r.why.trim() : "" };
+    });
+  } catch (e) {
+    throw new Error(`Gemini n'a pas donné de réponse exploitable (${e instanceof Error ? e.message : "réponse invalide"}). Réessaie plus tard.`, { cause: e });
+  }
+}
+
+function oneRmPrompt(requests: OneRmRequest[]): string {
+  const items = requests.map((r) => ({ exerciseId: r.exerciseId, name: r.name, equipment: r.equipment, sets: r.sets.slice(0, 40) }));
+  return [
+    "You are the coach of a personal strength-training app. Estimate the one-rep max (1RM) of the athlete on each Exercise below, from their logged working Sets.",
+    "Pick the estimate that fits the movement: the reliability of a formula depends on the Exercise (compound vs isolation, machine vs free weight) and on the reps (high reps overestimate). Weigh the heaviest, lowest-rep and most recent Sets most, and use the RPE when given (RPE 10 = no rep left, 9 = 1 left, 8 = 2 left).",
+    "Weights are in kg and count the lifted load only: for a weighted bodyweight movement (weight belt) it is the added load, never bodyweight.",
+    "Never answer below the heaviest weight in the Sets.",
+    `Answer with JSON only: {"estimates": [{"exerciseId": number, "oneRepMax": number, "why": string}]}, one entry per Exercise. The \`why\` is one short sentence in French.`,
+    `Exercises:\n${JSON.stringify(items, null, 2)}`,
+  ].join("\n\n");
+}
+
 // --- parsing helpers ---
 
 function parseJson(text: string): Record<string, unknown> {
@@ -191,7 +249,7 @@ function intOf(v: unknown): number {
 }
 
 function weightOf(v: unknown, equipment: string): number | null {
-  if (equipment === BODYWEIGHT) return null;
+  if (hasNoLoad(equipment)) return null;
   if (typeof v !== "number" || !Number.isFinite(v) || v < 0) throw new Error("not a weight");
   return v;
 }

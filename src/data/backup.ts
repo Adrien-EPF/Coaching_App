@@ -17,6 +17,7 @@ const TABLES = [
   "starting_weight",
   "problem_report",
   "objective",
+  "one_rm_estimate",
 ] as const;
 
 type Row = Record<string, SqlValue>;

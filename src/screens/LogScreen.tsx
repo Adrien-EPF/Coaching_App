@@ -7,13 +7,16 @@ import { ExerciseLogDetail, NumbersLogged, SessionLogDetail, SetLogDetail, Store
 import { todayIso } from "../domain/dates";
 import { longDate } from "../domain/format";
 import type { RootParams } from "../navigation";
-import { BODYWEIGHT, DEFAULT_RULES } from "../rules/rules";
+import { DEFAULT_RULES, hasNoLoad, TIMED } from "../rules/rules";
 import { Button, Card, Chip, ErrorText, Field, KeyboardView, Row, Sheet, Txt } from "../ui/kit";
 import { radius, space, useColors } from "../ui/theme";
 import { GOAL_LABELS } from "./ProgramScreen";
 
 const fmtKg = (n: number | null) => (n === null ? "—" : `${String(n).replace(".", ",")} kg`);
-const fmtNumbers = (n: NumbersLogged) => `${n.weight === null ? "" : `${fmtKg(n.weight)} × `}${n.reps} · RPE ${String(n.rpe).replace(".", ",")}`;
+/** Reps, or seconds for a timed Exercise. */
+const fmtReps = (reps: number, equipment: string) => (equipment === TIMED ? `${reps} s` : String(reps));
+const fmtNumbers = (n: NumbersLogged, equipment: string) =>
+  `${n.weight === null ? "" : `${fmtKg(n.weight)} × `}${fmtReps(n.reps, equipment)} · RPE ${String(n.rpe).replace(".", ",")}`;
 const parseNumber = (text: string) => Number(text.trim().replace(",", "."));
 
 /** Séance en cours, then read-only once validated. */
@@ -127,9 +130,13 @@ function ExerciseCard({
   const { repo } = useStore();
   const act = useAction();
   const first = exercise.sets[0];
-  const bodyweight = exercise.equipment === BODYWEIGHT;
+  const bodyweight = hasNoLoad(exercise.equipment);
   const planned =
-    first?.plannedReps != null ? (bodyweight ? `${first.plannedReps} reps` : `${fmtKg(first.plannedWeight)} × ${first.plannedReps}`) : null;
+    first?.plannedReps != null
+      ? bodyweight
+        ? exercise.equipment === TIMED ? fmtReps(first.plannedReps, exercise.equipment) : `${first.plannedReps} reps`
+        : `${fmtKg(first.plannedWeight)} × ${first.plannedReps}`
+      : null;
   return (
     <Card>
       <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: space[2] }}>
@@ -148,17 +155,17 @@ function ExerciseCard({
         )}
       </View>
       {exercise.sets.map((s) => (
-        <SetRow key={s.id} set={s} bodyweight={bodyweight} onPress={() => onEdit(s)} />
+        <SetRow key={s.id} set={s} bodyweight={bodyweight} equipment={exercise.equipment} onPress={() => onEdit(s)} />
       ))}
       <Button label="+ série" kind="secondary" small onPress={() => act(() => repo.addSet(logId, exercise.exerciseId))} />
     </Card>
   );
 }
 
-function SetRow({ set, bodyweight, onPress }: { set: SetLogDetail; bodyweight: boolean; onPress: () => void }) {
+function SetRow({ set, bodyweight, equipment, onPress }: { set: SetLogDetail; bodyweight: boolean; equipment: string; onPress: () => void }) {
   const c = useColors();
   const logged = set.reps !== null;
-  const done = logged ? `${bodyweight ? "" : `${fmtKg(set.weight)} × `}${set.reps} · RPE ${String(set.rpe).replace(".", ",")}` : null;
+  const done = logged ? `${bodyweight ? "" : `${fmtKg(set.weight)} × `}${fmtReps(set.reps!, equipment)} · RPE ${String(set.rpe).replace(".", ",")}` : null;
   return (
     <Pressable
       accessibilityRole="button"
@@ -183,10 +190,10 @@ function SetRow({ set, bodyweight, onPress }: { set: SetLogDetail; bodyweight: b
           <Txt kind="strong">{done}</Txt>
         ) : (
           <Txt kind="strong" muted>
-            {set.plannedReps != null ? `Prévu : ${bodyweight ? "" : `${fmtKg(set.plannedWeight)} × `}${set.plannedReps}` : "À saisir"}
+            {set.plannedReps != null ? `Prévu : ${bodyweight ? "" : `${fmtKg(set.plannedWeight)} × `}${fmtReps(set.plannedReps, equipment)}` : "À saisir"}
           </Txt>
         )}
-        {set.last && <Txt kind="caption" muted>Dernière fois : {fmtNumbers(set.last)}</Txt>}
+        {set.last && <Txt kind="caption" muted>Dernière fois : {fmtNumbers(set.last, equipment)}</Txt>}
       </View>
     </Pressable>
   );
@@ -233,7 +240,8 @@ function SetSheet({
   }, [target]);
 
   if (!target) return <Sheet visible={false} title="" onClose={onClose}>{null}</Sheet>;
-  const bodyweight = target.exercise.equipment === BODYWEIGHT;
+  const bodyweight = hasNoLoad(target.exercise.equipment);
+  const timed = target.exercise.equipment === TIMED;
 
   const save = async () => {
     if (rpe === null) return setError("Choisis le RPE.");
@@ -247,7 +255,7 @@ function SetSheet({
 
   return (
     <Sheet visible title={`${target.exercise.name} · série ${target.set.index + 1}`} onClose={onClose}>
-      {target.set.last && <Txt muted>Dernière fois : {fmtNumbers(target.set.last)}</Txt>}
+      {target.set.last && <Txt muted>Dernière fois : {fmtNumbers(target.set.last, target.exercise.equipment)}</Txt>}
       <Row wrap={false}>
         {!bodyweight && (
           <View style={{ flex: 1 }}>
@@ -255,7 +263,7 @@ function SetSheet({
           </View>
         )}
         <View style={{ flex: 1 }}>
-          <Field label="Reps" value={reps} onChangeText={setReps} keyboardType="number-pad" />
+          <Field label={timed ? "Durée (s)" : "Reps"} value={reps} onChangeText={setReps} keyboardType="number-pad" />
         </View>
       </Row>
       <View style={{ gap: space[2] }}>
@@ -303,7 +311,7 @@ function ValidationResult({ plan, onDone }: { plan: StoredPlan | null; onDone: (
           <Txt kind="strong">{e.name}</Txt>
           <Txt>
             {e.weight === null ? "" : `${fmtKg(e.weight)} · `}
-            {e.sets} × {e.reps}
+            {e.sets} × {fmtReps(e.reps, e.equipment)}
           </Txt>
           {e.reason && <Txt kind="caption" muted>{e.reason}</Txt>}
           {e.warnings.map((w) => (
