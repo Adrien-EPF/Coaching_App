@@ -39,7 +39,7 @@ export function TodayScreen() {
   const rest = useQuery(async (repo) => (await repo.getCalendar(today, today, today))[0].items.find((i) => i.type !== "planned"));
 
   return (
-    <Screen title="Aujourd'hui" subtitle={longDate(today)} right={<Button label="Réglages" kind="secondary" small onPress={() => navigation.navigate("Settings")} />}>
+    <Screen title="Aujourd'hui" subtitle={longDate(today)}>
       {plan === undefined ? null : plan === null ? (
         <Card>
           <Txt kind="heading">Pas de séance prévue</Txt>
