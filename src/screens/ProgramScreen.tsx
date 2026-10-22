@@ -22,7 +22,7 @@ export const EQUIPMENT_LABELS: Record<string, string> = {
   cable: "Poulie",
   weight_belt: "Ceinture de lest",
   bodyweight: "Poids du corps",
-  timed: "Durée (gainage)",
+  timed: "Durée",
 };
 
 export function ProgramScreen() {
@@ -66,10 +66,14 @@ export function ProgramScreen() {
           {fresh && fresh.length > 0 && (
             <Card>
               <Txt kind="heading">Charges de départ</Txt>
-              <Txt muted>
-                {plural(fresh.length, "exercice sans historique", "exercices sans historique")} : {fresh.map((e) => e.name).join(", ")}.
-              </Txt>
-              <Button label="Fixer les charges de départ" onPress={() => setSheet({ kind: "starting" })} />
+              {fresh.some((e) => !e.start) ? (
+                <Txt muted>
+                  {plural(fresh.filter((e) => !e.start).length, "exercice sans historique", "exercices sans historique")} : {fresh.filter((e) => !e.start).map((e) => e.name).join(", ")}.
+                </Txt>
+              ) : (
+                <Txt muted>Fixées pour {fresh.map((e) => e.name).join(", ")}. Elles servent jusqu'à la première séance validée.</Txt>
+              )}
+              <Button label={fresh.some((e) => !e.start) ? "Fixer les charges de départ" : "Modifier les charges de départ"} onPress={() => setSheet({ kind: "starting" })} />
             </Card>
           )}
 

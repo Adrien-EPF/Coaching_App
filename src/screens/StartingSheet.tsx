@@ -149,7 +149,7 @@ export function StartingSheet({ visible, onClose, exercises }: { visible: boolea
                         </View>
                       )}
                       <View style={{ flex: 1 }}>
-                        <Field label="Reps" value={d.reps} onChangeText={(t) => setDraft(x.exerciseId, { reps: t }, d)} keyboardType="number-pad" />
+                        <Field label={x.equipment === TIMED ? "Durée (s)" : "Reps"} value={d.reps} onChangeText={(t) => setDraft(x.exerciseId, { reps: t }, d)} keyboardType="number-pad" />
                       </View>
                     </Row>
                     {x.why ? <Txt kind="caption" muted>{x.why}</Txt> : null}

@@ -122,6 +122,15 @@ describe("Initial Weights", () => {
     expect(log.exercises[0].sets[0]).toMatchObject({ plannedWeight: 100, plannedReps: 5 });
   });
 
+  it("reports the saved starting load, so the screen knows the Exercise is set", async () => {
+    const x = await ids();
+    expect((await repo.exercisesWithoutHistory(programId)).every((e) => e.start === null)).toBe(true);
+    await repo.setStartingWeights([{ exerciseId: x.squat, weight: 100, reps: 5 }], "manual", MON);
+    const list = await repo.exercisesWithoutHistory(programId);
+    expect(list.find((e) => e.exerciseId === x.squat)!.start).toEqual({ weight: 100, reps: 5 });
+    expect(list.find((e) => e.exerciseId === x.front)!.start).toBeNull();
+  });
+
   it("rejects a weight that is not a number, and zero reps", async () => {
     const x = await ids();
     await expect(repo.setStartingWeights([{ exerciseId: x.squat, weight: -5, reps: 5 }], "manual", MON)).rejects.toThrow();
