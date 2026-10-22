@@ -1,15 +1,14 @@
-import { useNavigation } from "@react-navigation/native";
 import React, { useEffect, useState } from "react";
 import { Share, View } from "react-native";
+import { AppearanceChoice, getAppearance, setAppearance } from "../config/appearance";
 import { callGemini } from "../planner/geminiApi";
 import { clearGeminiKey, getGeminiKey, setGeminiKey } from "../config/geminiKey";
 import { exportCsv, exportJson, importJson } from "../data/backup";
 import { useAction, useStore } from "../data/RepoContext";
-import { Button, Card, ErrorText, Field, Row, Screen, Sheet, Txt } from "../ui/kit";
+import { Button, Card, Chip, ErrorText, Field, Row, Screen, Sheet, Txt } from "../ui/kit";
 
-/** Réglages: the Gemini API key, kept on this device only. */
+/** Réglages: the appearance, the Gemini API key (kept on this device only) and the data. */
 export function SettingsScreen() {
-  const navigation = useNavigation();
   const [saved, setSaved] = useState<boolean | null>(null);
   const [key, setKey] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +58,8 @@ export function SettingsScreen() {
   };
 
   return (
-    <Screen title="Réglages" subtitle="Gemini" right={<Button label="Fermer" kind="secondary" small onPress={() => navigation.goBack()} />}>
+    <Screen title="Réglages">
+      <AppearanceCard />
       <Card>
         <Txt kind="strong">{saved === null ? "…" : saved ? "Clé enregistrée sur cet appareil" : "Aucune clé enregistrée"}</Txt>
         <Txt kind="caption" muted>
@@ -78,6 +78,35 @@ export function SettingsScreen() {
       </View>
       <DataCard />
     </Screen>
+  );
+}
+
+const APPEARANCES: { id: AppearanceChoice; label: string }[] = [
+  { id: "system", label: "Système" },
+  { id: "light", label: "Clair" },
+  { id: "dark", label: "Sombre" },
+];
+
+/** Apparence: follow the phone, or force the light or the dark theme. */
+function AppearanceCard() {
+  const [choice, setChoice] = useState<AppearanceChoice>("system");
+  useEffect(() => {
+    getAppearance().then(setChoice);
+  }, []);
+  const pick = (c: AppearanceChoice) => {
+    setChoice(c);
+    setAppearance(c).catch(() => {});
+  };
+  return (
+    <Card>
+      <Txt kind="heading">Apparence</Txt>
+      <Txt kind="caption" muted>« Système » suit le mode clair ou sombre du téléphone.</Txt>
+      <Row>
+        {APPEARANCES.map((a) => (
+          <Chip key={a.id} label={a.label} selected={a.id === choice} onPress={() => pick(a.id)} />
+        ))}
+      </Row>
+    </Card>
   );
 }
 

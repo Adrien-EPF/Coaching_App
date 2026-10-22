@@ -10,9 +10,10 @@ import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { applyAppearance, getAppearance } from "./src/config/appearance";
 import { RepoProvider } from "./src/data/RepoContext";
 import type { RootParams } from "./src/navigation";
 import { LogScreen } from "./src/screens/LogScreen";
@@ -53,6 +54,7 @@ function Tabs() {
         <Tab.Screen name="Calendrier" component={CalendarScreen} />
         <Tab.Screen name="Programme" component={ProgramScreen} />
         <Tab.Screen name="Progrès" component={ProgressScreen} />
+        <Tab.Screen name="Réglages" component={SettingsScreen} />
       </Tab.Navigator>
   );
 }
@@ -66,7 +68,6 @@ function Root() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Tabs" component={Tabs} />
         <Stack.Screen name="Log" component={LogScreen} />
-        <Stack.Screen name="Settings" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -81,10 +82,17 @@ export default function App() {
     SofiaSansCondensed_700Bold,
     SofiaSansCondensed_800ExtraBold,
   });
+  const [appearanceReady, setAppearanceReady] = useState(false);
+  useEffect(() => {
+    getAppearance().then((choice) => {
+      applyAppearance(choice);
+      setAppearanceReady(true);
+    });
+  }, []);
   return (
     <SafeAreaProvider>
       <StatusBar style="auto" />
-      {loaded ? (
+      {loaded && appearanceReady ? (
         <RepoProvider fallback={<Loading />}>
           <Root />
         </RepoProvider>
