@@ -30,6 +30,7 @@ export interface StartingEntry {
 export interface Estimate extends StartingEntry {
   name: string;
   goal: GoalKey;
+  equipment: string;
   /** Why Gemini proposed it. */
   why: string;
 }
@@ -108,7 +109,7 @@ export class Starting {
     const generate = await this.gemini();
     const requests = await this.requests(fresh);
     const loads = await askForLoads(this.rules, "estimate", requests, generate);
-    return loads.map((l, i) => ({ exerciseId: l.exerciseId, name: fresh[i].name, goal: fresh[i].goal, weight: l.weight, reps: l.reps, why: l.why }));
+    return loads.map((l, i) => ({ exerciseId: l.exerciseId, name: fresh[i].name, goal: fresh[i].goal, equipment: fresh[i].equipment, weight: l.weight, reps: l.reps, why: l.why }));
   }
 
   /** A one-off Session on `date`, planned by Gemini, to measure the athlete's level on the new Exercises. */
