@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390">
+<title>Calendrier</title>
+<link rel="stylesheet" href="assets/app.css">
+<link rel="stylesheet" href="assets/ds/coach/components/bundle.css">
+<style>
+
+    .sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
+      border:1px solid color-mix(in srgb,currentColor 50%,transparent);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:color-mix(in srgb,currentColor 70%,transparent);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:color-mix(in srgb,currentColor 50%,transparent);
+      background:color-mix(in srgb,currentColor 10%,transparent);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts — keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      figure, table { break-inside: avoid; }
+      #dc-root, #dc-root > .sc-host { height: auto; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  
+x-dc{display:none!important}
+
+body{margin:0}
+a{color:var(--lime-ink)}a:hover{color:var(--ink)}
+.day{appearance:none;border:0;cursor:pointer;background:transparent;color:var(--ink);min-height:var(--control-lg);border-radius:var(--radius-sm);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:var(--space-1);padding:var(--space-1) 0;font-family:var(--font-sans)}
+.day:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.mark{width:28px;height:22px;border-radius:var(--radius-xs);display:flex;align-items:center;justify-content:center;font-family:var(--font-display);font-weight:800;font-size:13px}
+
+body{margin:0;background:#d9dcd1;display:flex;justify-content:center;padding:24px 0}
+.screen{box-shadow:0 8px 32px rgba(17,20,16,.18);border-radius:12px}
+</style>
+</head>
+<body>
+<div data-dc-tpl="2" class="screen" data-theme="light" style="width: 390px; height: 1000px;">
+  <header data-dc-tpl="3" style="display: flex; align-items: center; justify-content: space-between; padding: 24px 8px 8px 16px;">
+    <h1 data-dc-tpl="4" class="t-display-lg" style="margin: 0px;">Octobre</h1>
+    <div data-dc-tpl="5" style="display: flex;">
+      <button data-dc-tpl="6" class="icon-btn" type="button" aria-label="Mois précédent"><svg data-dc-tpl="7" class="icon" viewBox="0 0 24 24" aria-hidden="true"><path data-dc-tpl="8" d="M15 18l-6-6 6-6"></path></svg></button>
+      <button data-dc-tpl="9" class="icon-btn" type="button" aria-label="Mois suivant"><svg data-dc-tpl="10" class="icon" viewBox="0 0 24 24" aria-hidden="true"><path data-dc-tpl="11" d="M9 18l6-6-6-6"></path></svg></button>
+    </div>
+  </header>
+  <p data-dc-tpl="12" class="t-caption" style="margin: 0px; padding: 0px 16px 12px; color: var(--ink-muted);">Force 2026 · A le lundi, B le mercredi, C le samedi</p>
+
+  <main data-dc-tpl="13" style="flex-grow: 1; display: flex; flex-direction: column; gap: 20px; padding: 0px 16px 16px;">
+    <div data-dc-tpl="14" class="card" style="padding: 8px;">
+      <div data-dc-tpl="15" style="display: grid; grid-template-columns: repeat(7, minmax(0px, 1fr)); gap: 2px; padding-bottom: 4px;">
+        
+          <span data-dc-tpl="17" class="t-label" style="text-align: center; color: var(--ink-muted); padding: 4px 0px;"><span class="sc-interp">L</span></span>
+        
+          <span data-dc-tpl="17" class="t-label" style="text-align: center; color: var(--ink-muted); padding: 4px 0px;"><span class="sc-interp">M</span></span>
+        
+          <span data-dc-tpl="17" class="t-label" style="text-align: center; color: var(--ink-muted); padding: 4px 0px;"><span class="sc-interp">M</span></span>
+        
+          <span data-dc-tpl="17" class="t-label" style="text-align: center; color: var(--ink-muted); padding: 4px 0px;"><span class="sc-interp">J</span></span>
+        
+          <span data-dc-tpl="17" class="t-label" style="text-align: center; color: var(--ink-muted); padding: 4px 0px;"><span class="sc-interp">V</span></span>
+        
+          <span data-dc-tpl="17" class="t-label" style="text-align: center; color: var(--ink-muted); padding: 4px 0px;"><span class="sc-interp">S</span></span>
+        
+          <span data-dc-tpl="17" class="t-label" style="text-align: center; color: var(--ink-muted); padding: 4px 0px;"><span class="sc-interp">D</span></span>
+        
+      </div>
+      <div data-dc-tpl="18" style="display: grid; grid-template-columns: repeat(7, minmax(0px, 1fr)); gap: 2px;">
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="Vide" aria-pressed="false" style="visibility: hidden;">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp"></span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="Vide" aria-pressed="false" style="visibility: hidden;">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp"></span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="Vide" aria-pressed="false" style="visibility: hidden;">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp"></span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="1 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">1</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="2 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">2</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="3 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">3</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="4 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">4</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="5 octobre, Séance A validée" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">5</span></span>
+            <span data-dc-tpl="22" class="mark" style="background: var(--lime-soft); color: var(--lime-ink);"><span class="sc-interp">✓ A</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="6 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">6</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="7 octobre, Séance B manquée" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">7</span></span>
+            <span data-dc-tpl="22" class="mark" style="background: var(--danger); color: var(--on-danger);"><span class="sc-interp">× B</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="8 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">8</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="9 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">9</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="10 octobre, Séance C validée" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">10</span></span>
+            <span data-dc-tpl="22" class="mark" style="background: var(--lime-soft); color: var(--lime-ink);"><span class="sc-interp">✓ C</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="11 octobre, Séance hors programme hors programme" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">11</span></span>
+            <span data-dc-tpl="22" class="mark" style="background: var(--surface-sunken); color: var(--ink);"><span class="sc-interp">+</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="12 octobre, Séance A validée" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">12</span></span>
+            <span data-dc-tpl="22" class="mark" style="background: var(--lime-soft); color: var(--lime-ink);"><span class="sc-interp">✓ A</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="13 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">13</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="14 octobre, Séance B validée" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">14</span></span>
+            <span data-dc-tpl="22" class="mark" style="background: var(--lime-soft); color: var(--lime-ink);"><span class="sc-interp">✓ B</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="15 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">15</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="16 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">16</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="17 octobre, Séance C aujourd'hui" aria-pressed="true" style="box-shadow: inset 0 0 0 2px var(--ink);">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">17</span></span>
+            <span data-dc-tpl="22" class="mark" style="background: var(--lime); color: var(--on-lime);"><span class="sc-interp">C</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="18 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">18</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="19 octobre, Séance A prévue" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">19</span></span>
+            <span data-dc-tpl="22" class="mark" style="box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-muted);"><span class="sc-interp">A</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="20 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">20</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="21 octobre, Séance B prévue" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">21</span></span>
+            <span data-dc-tpl="22" class="mark" style="box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-muted);"><span class="sc-interp">B</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="22 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">22</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="23 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">23</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="24 octobre, Séance C prévue" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">24</span></span>
+            <span data-dc-tpl="22" class="mark" style="box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-muted);"><span class="sc-interp">C</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="25 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">25</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="26 octobre, Séance A prévue" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">26</span></span>
+            <span data-dc-tpl="22" class="mark" style="box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-muted);"><span class="sc-interp">A</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="27 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">27</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="28 octobre, Séance B prévue" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">28</span></span>
+            <span data-dc-tpl="22" class="mark" style="box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-muted);"><span class="sc-interp">B</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="29 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">29</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="30 octobre" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">30</span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="31 octobre, Séance C prévue" aria-pressed="false" style="">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp">31</span></span>
+            <span data-dc-tpl="22" class="mark" style="box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--ink-muted);"><span class="sc-interp">C</span></span>
+          </button>
+        
+          <button data-dc-tpl="20" class="day" type="button" aria-label="Vide" aria-pressed="false" style="visibility: hidden;">
+            <span data-dc-tpl="21" class="num" style="font-size: 15px; font-weight: 600; line-height: 18px;"><span class="sc-interp"></span></span>
+            <span data-dc-tpl="22" class="mark" style="visibility: hidden;"><span class="sc-interp"></span></span>
+          </button>
+        
+      </div>
+    </div>
+
+    <div data-dc-tpl="23" style="display: flex; flex-wrap: wrap; gap: 8px;">
+      <div class="sc-host-x" data-dc-tpl="24" style="display: contents;"><span class="ca-status ca-status-validated"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" class="ca-glyph" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5l3.2 3L13 4.5"></path></svg>Validée</span></div>
+      <div class="sc-host-x" data-dc-tpl="25" style="display: contents;"><span class="ca-status ca-status-today"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" class="ca-glyph" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.5" fill="currentColor" stroke="none"></circle></svg>Aujourd'hui</span></div>
+      <div class="sc-host-x" data-dc-tpl="26" style="display: contents;"><span class="ca-status ca-status-planned"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" class="ca-glyph" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="4.5"></circle></svg>Prévue</span></div>
+      <div class="sc-host-x" data-dc-tpl="27" style="display: contents;"><span class="ca-status ca-status-missed"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" class="ca-glyph" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l8 8M12 4l-8 8"></path></svg>Manquée</span></div>
+      <div class="sc-host-x" data-dc-tpl="28" style="display: contents;"><span class="ca-status ca-status-unplanned"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" class="ca-glyph" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v10M3 8h10"></path></svg>Hors programme</span></div>
+    </div>
+
+    <section data-dc-tpl="29" class="card" aria-labelledby="sel" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+      <div data-dc-tpl="30" style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+        <span data-dc-tpl="31" class="t-label" style="color: var(--ink-muted);"><span class="sc-interp">Samedi 17 octobre</span></span>
+        <div class="sc-host-x" data-dc-tpl="32" style="display: contents;"><span class="ca-status ca-status-today"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" class="ca-glyph" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3.5" fill="currentColor" stroke="none"></circle></svg>Aujourd'hui</span></div>
+      </div>
+      <h2 data-dc-tpl="33" id="sel" class="t-title-lg" style="margin: 0px;"><span class="sc-interp">Séance C</span></h2>
+      <p data-dc-tpl="34" class="t-body" style="margin: 0px; color: var(--ink-muted);"><span class="sc-interp">Squat, tractions lestées, développé couché, rowing haltère.</span></p>
+      <div data-dc-tpl="35" style="display: grid; grid-template-columns: repeat(2, minmax(0px, 1fr)); gap: 8px;">
+        <div class="sc-host-x" data-dc-tpl="36" style="display: contents;"><button type="button" class="ca-btn ca-btn-secondary ca-btn-md ca-btn-block">Déplacer</button></div>
+        <a data-dc-tpl="37" class="ca-btn ca-btn-secondary ca-btn-block" href="Probleme.html">Problème</a>
+      </div>
+      <div class="sc-host-x" data-dc-tpl="38" style="display: contents;"><button type="button" class="ca-btn ca-btn-ghost ca-btn-md ca-btn-block">Marquer comme manquée</button></div>
+    </section>
+
+    <div data-dc-tpl="39" style="display: grid; grid-template-columns: repeat(2, minmax(0px, 1fr)); gap: 8px;">
+      <button data-dc-tpl="40" class="chip" type="button" style="justify-content: center;"><svg data-dc-tpl="41" class="icon icon-20" viewBox="0 0 24 24" aria-hidden="true"><path data-dc-tpl="42" d="M12 5v14M5 12h14"></path></svg>Hors programme</button>
+      <button data-dc-tpl="43" class="chip" type="button" style="justify-content: center;">Repos ou blessure</button>
+    </div>
+  </main>
+
+  <nav data-dc-tpl="44" class="nav" aria-label="Navigation principale">
+    <a data-dc-tpl="45" href="Main.html"><span data-dc-tpl="46" class="pill"><svg data-dc-tpl="47" class="icon icon-20" viewBox="0 0 24 24" aria-hidden="true"><path data-dc-tpl="48" d="M6.5 6.5h11M6.5 17.5h11M3 9v6M21 9v6M6.5 5v14M17.5 5v14"></path></svg></span>Séance</a>
+    <a data-dc-tpl="49" href="Calendrier.html" aria-current="page"><span data-dc-tpl="50" class="pill"><svg data-dc-tpl="51" class="icon icon-20" viewBox="0 0 24 24" aria-hidden="true"><rect data-dc-tpl="52" x="3" y="4" width="18" height="18" rx="2"></rect><path data-dc-tpl="53" d="M16 2v4M8 2v4M3 10h18"></path></svg></span>Calendrier</a>
+    <a data-dc-tpl="54" href="Programme.html"><span data-dc-tpl="55" class="pill"><svg data-dc-tpl="56" class="icon icon-20" viewBox="0 0 24 24" aria-hidden="true"><path data-dc-tpl="57" d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"></path></svg></span>Programme</a>
+    <a data-dc-tpl="58" href="Progres.html"><span data-dc-tpl="59" class="pill"><svg data-dc-tpl="60" class="icon icon-20" viewBox="0 0 24 24" aria-hidden="true"><path data-dc-tpl="61" d="M22 7l-8.5 8.5-5-5L2 17"></path><path data-dc-tpl="62" d="M16 7h6v6"></path></svg></span>Progrès</a>
+  </nav></div>
+</body>
+</html>
