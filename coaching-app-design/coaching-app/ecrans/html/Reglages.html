@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390">
+<title>Réglages</title>
+<link rel="stylesheet" href="assets/app.css">
+<link rel="stylesheet" href="assets/ds/coach/components/bundle.css">
+<style>
+
+    .sc-placeholder{background:color-mix(in srgb,currentColor 8%,transparent);
+      border:1px solid color-mix(in srgb,currentColor 50%,transparent);
+      border-radius:2px;box-sizing:border-box;overflow:hidden}
+    @keyframes sc-shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+    html.sc-dc-streaming .sc-placeholder,
+    html.sc-dc-streaming .sc-interp.sc-missing{position:relative;
+      background:color-mix(in srgb,currentColor 5%,transparent);
+      border-color:transparent}
+    html.sc-dc-streaming .sc-placeholder::before,
+    html.sc-dc-streaming .sc-interp.sc-missing::before{content:'';
+      position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(90deg,rgba(217,119,87,0) 25%,rgba(247,225,211,.95) 37%,rgba(217,119,87,0) 63%);
+      background-size:400% 100%;animation:sc-shine 1.4s ease infinite}
+    html.sc-dc-streaming .sc-placeholder:nth-child(n+9 of .sc-placeholder)::before,
+    html.sc-dc-streaming .sc-interp.sc-missing:nth-child(n+9 of .sc-interp.sc-missing)::before{animation:none;
+      background:color-mix(in srgb,currentColor 8%,transparent)}
+    .sc-placeholder-error{padding:4px 8px;font:11px/1.4 ui-monospace,monospace;
+      color:color-mix(in srgb,currentColor 70%,transparent);word-break:break-word}
+    .sc-interp.sc-missing{display:inline-block;width:2em;height:1em;overflow:hidden;
+      vertical-align:text-bottom;background:rgba(255,255,255,.3);border:1px solid rgba(0,0,0,.5);
+      border-radius:2px;box-sizing:border-box;color:transparent;
+      user-select:none}
+    .sc-interp.sc-unresolved{font-family:ui-monospace,monospace;font-size:.85em;
+      color:color-mix(in srgb,currentColor 50%,transparent);
+      background:color-mix(in srgb,currentColor 10%,transparent);border-radius:3px;
+      padding:0 3px}
+    .sc-host.sc-has-error{position:relative}
+    .sc-logic-error{position:absolute;top:8px;left:8px;z-index:2147483647;max-width:60ch;
+      padding:6px 10px;background:#b00020;color:#fff;font:12px/1.4 ui-monospace,monospace;
+      border-radius:4px;white-space:pre-wrap;pointer-events:none}
+    /* Mirrors PRINT_BASELINE_CSS in apps/web deck-stage-export.ts — keep both
+       in sync until dc-runtime regains a build step. */
+    @media print {
+      @page { margin: 0.5cm; }
+      figure, table { break-inside: avoid; }
+      #dc-root, #dc-root > .sc-host { height: auto; }
+      *, *::before, *::after {
+        print-color-adjust: exact; -webkit-print-color-adjust: exact;
+        backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+        animation-delay: -99s !important; animation-duration: .001s !important;
+        animation-iteration-count: 1 !important; animation-fill-mode: both !important;
+        animation-play-state: running !important; transition-duration: 0s !important;
+      }
+    }
+  
+x-dc{display:none!important}
+
+body{margin:0}
+a{color:var(--lime-ink)}a:hover{color:var(--ink)}
+
+body{margin:0;background:#d9dcd1;display:flex;justify-content:center;padding:24px 0}
+.screen{box-shadow:0 8px 32px rgba(17,20,16,.18);border-radius:12px}
+</style>
+</head>
+<body>
+<div data-dc-tpl="2" class="screen" data-theme="light" style="width: 390px; height: 900px;">
+  <header data-dc-tpl="3" style="display: flex; align-items: center; gap: 4px; padding: 8px 16px 0px 8px;">
+    <a data-dc-tpl="4" class="icon-btn" href="Main.html" aria-label="Retour"><svg data-dc-tpl="5" class="icon" viewBox="0 0 24 24" aria-hidden="true"><path data-dc-tpl="6" d="M15 18l-6-6 6-6"></path></svg></a>
+    <h1 data-dc-tpl="7" class="t-display-lg" style="margin: 0px;">Réglages</h1>
+  </header>
+
+  <main data-dc-tpl="8" style="flex-grow: 1; display: flex; flex-direction: column; gap: 24px; padding: 20px 16px 16px;">
+    <section data-dc-tpl="9" aria-labelledby="s-rules" style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 data-dc-tpl="10" id="s-rules" class="t-label" style="margin: 0px; color: var(--ink-muted);">Règles</h2>
+      <div data-dc-tpl="11" class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <div data-dc-tpl="12" style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span data-dc-tpl="13" class="t-body-strong">Version 1</span>
+          <span data-dc-tpl="14" class="t-caption" style="color: var(--ink-muted);">16 octobre 2026</span>
+        </div>
+        <p data-dc-tpl="15" class="t-caption" style="margin: 0px; color: var(--ink-muted);">Double progression · hausse max +10 % · baisse max −10 % · RPE max 9 en Force et Hypertrophie.</p>
+        <div class="sc-host-x" data-dc-tpl="16" style="display: contents;"><button type="button" class="ca-btn ca-btn-secondary ca-btn-md ca-btn-block">Importer une nouvelle version</button></div>
+      </div>
+    </section>
+
+    <section data-dc-tpl="17" aria-labelledby="s-gem" style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 data-dc-tpl="18" id="s-gem" class="t-label" style="margin: 0px; color: var(--ink-muted);">Gemini</h2>
+      <div data-dc-tpl="19" class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <label data-dc-tpl="20" for="key" class="t-label" style="color: var(--ink-muted);">Clé API</label>
+        <input data-dc-tpl="21" id="key" class="field num" type="password" autocomplete="off" value="AIzaSyD-coaching-demo-key" style="">
+        <p data-dc-tpl="22" class="t-caption" style="margin: 0px; color: var(--ink-muted);">Un appel par séance validée. Si Gemini ne répond pas, le plan est calculé avec tes règles seules.</p>
+      </div>
+    </section>
+
+    <section data-dc-tpl="23" aria-labelledby="s-theme" style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 data-dc-tpl="24" id="s-theme" class="t-label" style="margin: 0px; color: var(--ink-muted);">Thème</h2>
+      <div data-dc-tpl="25" role="radiogroup" aria-labelledby="s-theme" style="display: grid; grid-template-columns: repeat(3, minmax(0px, 1fr)); gap: 8px;">
+        <button data-dc-tpl="26" type="button" role="radio" aria-checked="false" class="chip" style="justify-content: center;">Clair</button>
+        <button data-dc-tpl="27" type="button" role="radio" aria-checked="false" class="chip" style="justify-content: center;">Sombre</button>
+        <button data-dc-tpl="28" type="button" role="radio" aria-checked="true" class="chip chip-on" style="justify-content: center;">Système</button>
+      </div>
+    </section>
+
+    <section data-dc-tpl="29" aria-labelledby="s-data" style="display: flex; flex-direction: column; gap: 8px;">
+      <h2 data-dc-tpl="30" id="s-data" class="t-label" style="margin: 0px; color: var(--ink-muted);">Données</h2>
+      <div data-dc-tpl="31" class="card" style="padding: 16px; display: flex; flex-direction: column; gap: 12px;">
+        <p data-dc-tpl="32" class="t-body" style="margin: 0px;">Tout reste sur ce téléphone. Exporte régulièrement : un téléphone perdu, c'est l'historique perdu.</p>
+        <div data-dc-tpl="33" style="display: grid; grid-template-columns: repeat(2, minmax(0px, 1fr)); gap: 8px;">
+          <div class="sc-host-x" data-dc-tpl="34" style="display: contents;"><button type="button" class="ca-btn ca-btn-secondary ca-btn-md ca-btn-block">Export JSON</button></div>
+          <div class="sc-host-x" data-dc-tpl="35" style="display: contents;"><button type="button" class="ca-btn ca-btn-secondary ca-btn-md ca-btn-block">Export CSV</button></div>
+        </div>
+        <span data-dc-tpl="36" class="t-caption" style="color: var(--ink-muted);">Dernier export : 12 octobre</span>
+      </div>
+    </section>
+  </main></div>
+</body>
+</html>
