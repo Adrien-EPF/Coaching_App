@@ -9,7 +9,7 @@ import { space } from "../ui/theme";
 
 const label = (period: string) => (period.length === 4 ? period : `${MONTHS[Number(period.slice(5)) - 1]} ${period.slice(0, 4)}`);
 
-/** Adhérence: Sessions done versus planned, per month or per year. */
+/** Assiduité: Sessions done versus planned, per month or per year. */
 export function AdherenceCard() {
   const data = useQuery((repo) => repo.getAdherence(todayIso()));
   const [view, setView] = useState<"months" | "years">("months");
@@ -17,8 +17,8 @@ export function AdherenceCard() {
   const buckets: AdherenceBucket[] = [...data[view]].reverse();
 
   return (
-    <Card>
-      <Txt kind="heading">Adhérence</Txt>
+    <Card style={{ gap: space[3] }}>
+      <Txt kind="caps" muted>Assiduité</Txt>
       <Row>
         <Chip label="Par mois" selected={view === "months"} onPress={() => setView("months")} />
         <Chip label="Par an" selected={view === "years"} onPress={() => setView("years")} />
@@ -30,10 +30,10 @@ export function AdherenceCard() {
           const pct = Math.round((b.done / b.planned) * 100);
           return (
             <View key={b.period} style={{ gap: space[1] }}>
-              <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+              <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "baseline" }}>
                 <Txt kind="strong">{label(b.period)}</Txt>
-                <Txt kind="strong">
-                  {b.done} / {b.planned} · {pct} %
+                <Txt kind="heading">
+                  {b.done}/{b.planned} <Txt kind="caps" muted>{pct} %</Txt>
                 </Txt>
               </View>
               <ProgressBar pct={pct} />

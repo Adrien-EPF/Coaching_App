@@ -1,12 +1,13 @@
 import React, { useState } from "react";
 import { NavigationProp, useNavigation } from "@react-navigation/native";
-import { Pressable, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import type { RootParams } from "../navigation";
 import { useAction, useQuery, useStore } from "../data/RepoContext";
 import { CalendarDay, CalendarItem } from "../data/repo";
 import { addDays, daysInMonth, IsoDate, mondayOf, todayIso, toIso, weekday } from "../domain/dates";
 import { formatFr, longDate, maskFr, MONTHS, parseFr, plural } from "../domain/format";
-import { Button, Card, Chip, ErrorText, Field, Row, Screen, Sheet, Txt } from "../ui/kit";
+import { Icon, IconName } from "../ui/icons";
+import { Button, Card, Chip, ErrorText, Field, IconButton, Row, Screen, SessionState, Sheet, Split, StatusBadge, Txt } from "../ui/kit";
 import { fonts, radius, space, useColors } from "../ui/theme";
 
 type Planned = Extract<CalendarItem, { type: "planned" }>;
@@ -19,8 +20,18 @@ const STATUS_LABELS: Record<Planned["status"], string> = {
   moved: "Déplacée",
 };
 
+const STATUS_STATE: Record<Planned["status"], SessionState> = {
+  planned: "planned",
+  done: "done",
+  skipped: "notDone",
+  missed: "missed",
+  moved: "unplanned",
+};
+
+/** The letter a Session carries on the calendar: "Séance C" shows C. */
+const initialOf = (name: string) => (name.trim().split(/\s+/).pop() ?? "?").slice(0, 1).toUpperCase();
+
 export function CalendarScreen() {
-  const c = useColors();
   const today = todayIso();
   const [year, setYear] = useState(Number(today.slice(0, 4)));
   const [month, setMonth] = useState(Number(today.slice(5, 7)));
@@ -42,19 +53,23 @@ export function CalendarScreen() {
     setYear(year + Math.floor(m / 12));
     setMonth(((m % 12) + 12) % 12 + 1);
   };
+  const c = useColors();
 
   return (
-    <Screen title="Calendrier" subtitle={program ? program.name : "Aucun programme"}>
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Chip label="‹" onPress={() => shift(-1)} />
-        <Txt kind="heading">{MONTHS[month - 1].replace(/^./, (x) => x.toUpperCase())} {year}</Txt>
-        <Chip label="›" onPress={() => shift(1)} />
-      </View>
-
-      <View style={{ gap: space[1] }}>
+    <Screen
+      title={`${MONTHS[month - 1].replace(/^./, (x) => x.toUpperCase())}${year === Number(today.slice(0, 4)) ? "" : ` ${year}`}`}
+      lead={program ? program.name : "Aucun programme"}
+      right={
+        <View style={{ flexDirection: "row", marginRight: -space[3] }}>
+          <IconButton icon="back" label="Mois précédent" onPress={() => shift(-1)} />
+          <IconButton icon="next" label="Mois suivant" onPress={() => shift(1)} />
+        </View>
+      }
+    >
+      <View style={{ backgroundColor: c.surfaceRaised, borderRadius: radius.lg, borderWidth: 1, borderColor: c.line, padding: space[2], gap: space[1] }}>
         <View style={{ flexDirection: "row" }}>
           {["L", "M", "M", "J", "V", "S", "D"].map((l, i) => (
-            <Txt key={i} kind="caps" muted style={{ flex: 1, textAlign: "center" }}>{l}</Txt>
+            <Txt key={i} kind="caps" muted style={{ flex: 1, textAlign: "center", paddingVertical: space[2] }}>{l}</Txt>
           ))}
         </View>
         {weeks.map((w) => (
@@ -74,12 +89,12 @@ export function CalendarScreen() {
         ))}
       </View>
 
-      <View style={{ flexDirection: "row", gap: space[4], flexWrap: "wrap" }}>
-        <Legend color={c.lime} label="Prévue" />
-        <Legend color={c.danger} label="Manquée" />
-        <Legend color={c.lineStrong} label="Passée / déplacée" />
-        <Legend color={c.enduranceInk} label="Repos" />
-        <Legend color={c.warningInk} label="Blessure" />
+      <View style={{ flexDirection: "row", gap: space[2], flexWrap: "wrap" }}>
+        <StatusBadge state="done" />
+        <StatusBadge state="today" />
+        <StatusBadge state="planned" />
+        <StatusBadge state="missed" />
+        <StatusBadge state="unplanned" />
       </View>
 
       <DayDetail date={selected} day={byDate.get(selected)} today={today} />
@@ -87,20 +102,48 @@ export function CalendarScreen() {
   );
 }
 
-function Legend({ color, label }: { color: string; label: string }) {
+/** One mark on a calendar day: a letter on the Session's status color, with a glyph when it is done or missed. */
+function Mark({ item, isToday }: { item: CalendarItem; isToday: boolean }) {
+  const c = useColors();
+  let bg = "transparent";
+  let fg = c.ink;
+  let border = c.lineStrong;
+  let glyph: IconName | null = null;
+  let letter = "+";
+  if (item.type === "planned") {
+    letter = initialOf(item.name);
+    if (item.status === "done") ({ bg, fg, border, glyph } = { bg: c.limeSoft, fg: c.limeInk, border: c.limeSoft, glyph: "check" });
+    else if (item.status === "missed") ({ bg, fg, border, glyph } = { bg: c.danger, fg: c.onDanger, border: c.danger, glyph: "cross" });
+    else if (item.status === "planned" && isToday) ({ bg, fg, border } = { bg: c.lime, fg: c.onLime, border: c.lime });
+    else if (item.status === "planned") ({ bg, fg, border } = { bg: "transparent", fg: c.ink, border: c.lineStrong });
+    else ({ bg, fg, border } = { bg: c.surfaceSunken, fg: c.inkMuted, border: c.surfaceSunken });
+  } else if (item.type === "rest") {
+    ({ bg, fg, border, letter } = { bg: c.endurance, fg: c.onEndurance, border: c.endurance, letter: "R" });
+  } else if (item.type === "injury") {
+    ({ bg, fg, border, letter } = { bg: c.warning, fg: c.onWarning, border: c.warning, letter: "!" });
+  } else {
+    ({ bg, fg, border } = { bg: c.surfaceSunken, fg: c.ink, border: c.surfaceSunken });
+  }
   return (
-    <View style={{ flexDirection: "row", alignItems: "center", gap: space[1] }}>
-      <View style={{ width: 12, height: 6, borderRadius: radius.xs, backgroundColor: color }} />
-      <Txt kind="caption" muted>{label}</Txt>
+    <View
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: 2,
+        minWidth: 26,
+        height: 22,
+        paddingHorizontal: 4,
+        borderRadius: radius.xs,
+        backgroundColor: bg,
+        borderWidth: 1.5,
+        borderColor: border,
+      }}
+    >
+      {glyph ? <Icon name={glyph} color={fg} size={12} stroke={3} /> : null}
+      <Text style={{ fontFamily: fonts.displayBold, fontSize: 14, color: fg }}>{letter}</Text>
     </View>
   );
-}
-
-function marksOf(items: CalendarItem[], c: ReturnType<typeof useColors>): string[] {
-  return items.map((i) => {
-    if (i.type !== "planned") return i.type === "rest" ? c.enduranceInk : i.type === "injury" ? c.warningInk : c.ink;
-    return i.status === "planned" || i.status === "done" ? c.lime : i.status === "missed" ? c.danger : c.lineStrong;
-  });
 }
 
 function DayCell({
@@ -119,7 +162,7 @@ function DayCell({
   onPress: () => void;
 }) {
   const c = useColors();
-  const marks = marksOf(day?.items ?? [], c);
+  const items = (day?.items ?? []).slice(0, 2);
   return (
     <Pressable
       accessibilityRole="button"
@@ -127,19 +170,21 @@ function DayCell({
       onPress={onPress}
       style={{
         flex: 1,
-        height: 56,
+        minHeight: 64,
         borderRadius: radius.sm,
+        borderWidth: 2,
+        borderColor: isSelected ? c.contrast : "transparent",
         alignItems: "center",
-        justifyContent: "center",
+        justifyContent: "flex-start",
+        paddingTop: space[2],
         gap: space[1],
-        backgroundColor: isSelected ? c.contrast : isToday ? c.limeSoft : "transparent",
-        opacity: inMonth ? 1 : 0.4,
+        opacity: inMonth ? 1 : 0.35,
       }}
     >
-      <Txt style={{ fontFamily: fonts.sansBold, color: isSelected ? c.onContrast : c.ink }}>{Number(date.slice(8))}</Txt>
-      <View style={{ flexDirection: "row", gap: 2, height: 6 }}>
-        {marks.slice(0, 3).map((color, i) => (
-          <View key={i} style={{ width: 12, height: 6, borderRadius: radius.xs, backgroundColor: color }} />
+      <Txt kind="heading" style={{ fontSize: 20, lineHeight: 22 }}>{Number(date.slice(8))}</Txt>
+      <View style={{ gap: 2 }}>
+        {items.map((item, i) => (
+          <Mark key={i} item={item} isToday={isToday} />
         ))}
       </View>
     </Pressable>
@@ -154,15 +199,19 @@ function DayDetail({ date, day, today }: { date: IsoDate; day?: CalendarDay; tod
 
   return (
     <View style={{ gap: space[3] }}>
-      <Txt kind="heading">{longDate(date)}</Txt>
-      {items.length === 0 && <Txt muted>Rien de prévu ce jour-là.</Txt>}
+      {items.length === 0 && (
+        <Card>
+          <Txt kind="caps" muted>{longDate(date)}</Txt>
+          <Txt muted>Rien de prévu ce jour-là.</Txt>
+        </Card>
+      )}
       {items.map((item, i) => (
-        <ItemCard key={i} item={item} date={date} onMove={setMoving} />
+        <ItemCard key={i} item={item} date={date} today={today} onMove={setMoving} />
       ))}
-      <Row>
-        <Button label="Hors programme" kind="secondary" small onPress={() => setUnplanned(true)} />
+      <Split>
+        <Button label="Hors programme" kind="secondary" icon="plus" small onPress={() => setUnplanned(true)} />
         <Button label="Repos ou blessure" kind="secondary" small onPress={() => setRest(true)} />
-      </Row>
+      </Split>
       <MoveSheet item={moving} date={date} today={today} onClose={() => setMoving(null)} />
       <UnplannedSheet visible={unplanned} date={date} onClose={() => setUnplanned(false)} />
       <RestSheet visible={rest} date={date} onClose={() => setRest(false)} />
@@ -170,63 +219,58 @@ function DayDetail({ date, day, today }: { date: IsoDate; day?: CalendarDay; tod
   );
 }
 
-function ItemCard({ item, date, onMove }: { item: CalendarItem; date: IsoDate; onMove: (i: Planned) => void }) {
+function ItemCard({ item, date, today, onMove }: { item: CalendarItem; date: IsoDate; today: IsoDate; onMove: (i: Planned) => void }) {
   const act = useAction();
   const { repo } = useStore();
-  const c = useColors();
+  const navigation = useNavigation<NavigationProp<RootParams>>();
 
   if (item.type !== "planned") {
     const title = item.type === "rest" ? "Repos" : item.type === "injury" ? "Blessure" : "Séance hors programme";
     return (
-      <Card>
-        <Txt kind="strong">{title}</Txt>
+      <Card style={{ gap: space[3] }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Txt kind="caps" muted>{longDate(date)}</Txt>
+          {item.type === "unplanned" ? <StatusBadge state="unplanned" /> : null}
+        </View>
+        <Txt kind="titleLg">{title}</Txt>
         {item.label ? <Txt muted>{item.label}</Txt> : null}
-        <Row>
-          <Button label="Retirer" kind="secondary" small onPress={() => act(() => repo.removeEntry(item.id))} />
-        </Row>
+        <Button label="Retirer" kind="secondary" small onPress={() => act(() => repo.removeEntry(item.id))} />
       </Card>
     );
   }
 
-  const navigation = useNavigation<NavigationProp<RootParams>>();
   const openLog = (programSessionId: number, on: IsoDate) => navigation.navigate("Log", { programSessionId, date: on });
   const movedIn = item.movedFrom !== undefined;
   const reset = () => act(() => repo.clearOccurrence(item.sessionId, item.plannedDate));
-  const color = item.status === "missed" ? c.danger : item.status === "planned" || item.status === "done" ? c.limeInk : c.inkMuted;
+  const state: SessionState = item.status === "planned" && date === today ? "today" : STATUS_STATE[item.status];
+  const detail =
+    (item.movedTo ? `Déplacée au ${longDate(item.movedTo)}` : "") + (movedIn ? `Déplacée depuis le ${longDate(item.movedFrom!)}` : "");
   return (
-    <Card>
-      <Txt kind="strong">{item.name}</Txt>
+    <Card style={{ gap: space[3] }}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: space[2] }}>
+        <Txt kind="caps" muted>{longDate(date)}</Txt>
+        <StatusBadge state={state} label={item.status === "skipped" ? "Passée" : item.status === "moved" ? "Déplacée" : undefined} />
+      </View>
+      <Txt kind="titleLg">{item.name}</Txt>
       <Txt muted>
         {plural(item.exerciseCount, "exercice", "exercices")} · {plural(item.setCount, "série", "séries")}
       </Txt>
-      <Txt kind="caps" style={{ color }}>
-        {STATUS_LABELS[item.status]}
-        {item.movedTo ? ` au ${longDate(item.movedTo)}` : ""}
-        {movedIn ? ` · depuis le ${longDate(item.movedFrom!)}` : ""}
-      </Txt>
-      <Row>
-        {item.status === "planned" || item.status === "missed" ? (
-          <>
-            {!movedIn && <Button label="Déplacer" kind="secondary" small onPress={() => onMove(item)} />}
-            {!movedIn && item.status === "planned" && (
-              <Button label="Passer" kind="secondary" small onPress={() => act(() => repo.skipSession(item.sessionId, date))} />
-            )}
-            {!movedIn && item.status === "planned" && (
-              <Button label="Marquer comme manquée" kind="secondary" small onPress={() => act(() => repo.markMissed(item.sessionId, date))} />
-            )}
-          </>
-        ) : null}
-        {item.status === "done" && (
-          <Button label="Voir la séance" kind="secondary" small onPress={() => openLog(item.sessionId, date)} />
-        )}
-        {item.status === "planned" && date <= todayIso() && (
-          <Button label="Commencer" small onPress={() => openLog(item.sessionId, date)} />
-        )}
-        {!movedIn && item.status !== "planned" && item.status !== "done" && (
-          <Button label="Rétablir" kind="secondary" small onPress={reset} />
-        )}
-        {movedIn && <Button label="Annuler le déplacement" kind="secondary" small onPress={reset} />}
-      </Row>
+      {detail ? <Txt kind="caption" muted>{detail}</Txt> : null}
+      {item.status === "planned" && date <= today ? <Button large label="Commencer" onPress={() => openLog(item.sessionId, date)} /> : null}
+      {item.status === "done" && <Button label="Voir la séance" kind="secondary" onPress={() => openLog(item.sessionId, date)} />}
+      {item.status === "planned" || item.status === "missed" ? (
+        <Split>
+          {!movedIn ? <Button label="Déplacer" kind="secondary" small onPress={() => onMove(item)} /> : <View />}
+          {!movedIn && item.status === "planned" ? <Button label="Passer" kind="secondary" small onPress={() => act(() => repo.skipSession(item.sessionId, date))} /> : <View />}
+        </Split>
+      ) : null}
+      {!movedIn && item.status === "planned" && (
+        <Button label="Marquer comme manquée" kind="ghost" small onPress={() => act(() => repo.markMissed(item.sessionId, date))} />
+      )}
+      {!movedIn && item.status !== "planned" && item.status !== "done" && (
+        <Button label="Rétablir" kind="secondary" small onPress={reset} />
+      )}
+      {movedIn && <Button label="Annuler le déplacement" kind="secondary" small onPress={reset} />}
     </Card>
   );
 }

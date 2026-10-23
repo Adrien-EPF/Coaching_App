@@ -6,8 +6,10 @@ import { CYCLE_LABELS, CycleKind, slotCount, slotLabel } from "../domain/cycle";
 import { todayIso } from "../domain/dates";
 import { formatFr, maskFr, parseFr, plural, shortDate } from "../domain/format";
 import { StartingSheet } from "./StartingSheet";
-import { Button, Card, Chip, ErrorText, Field, Row, Screen, Sheet, Txt } from "../ui/kit";
-import { space, useColors } from "../ui/theme";
+import { DEFAULT_RULES } from "../rules/rules";
+import { Icon } from "../ui/icons";
+import { Button, Card, Chip, ErrorText, Field, GoalBadge, Row, Screen, SectionLabel, Sheet, Txt } from "../ui/kit";
+import { radius, size, space, useColors } from "../ui/theme";
 
 export const GOAL_LABELS: Record<TrainingGoal, string> = {
   strength: "Force",
@@ -42,26 +44,30 @@ export function ProgramScreen() {
     | { kind: "editExercise"; exercise: SessionExercise }
     | null
   >(null);
+  const [pickedId, setPickedId] = useState<number | null>(null);
   const close = () => setSheet(null);
 
   if (detail === undefined) return <Screen title="Programme">{null}</Screen>;
 
+  const picked = detail ? (detail.sessions.find((s) => s.id === pickedId) ?? detail.sessions[0]) : undefined;
+
   return (
-    <Screen title="Programme" subtitle={detail ? "Programme actif" : undefined}>
+    <Screen
+      title={detail ? detail.program.name : "Programme"}
+      subtitle={detail ? "Programme actif" : undefined}
+      lead={detail ? `Depuis le ${shortDate(detail.program.startDate)} · ${plural(detail.sessions.length, "séance", "séances")} par cycle` : undefined}
+    >
       {detail ? (
         <>
-          <Card>
-            <Txt kind="heading">{detail.program.name}</Txt>
-            <Txt muted>
-              Depuis le {shortDate(detail.program.startDate)} · {plural(detail.sessions.length, "séance", "séances")} par cycle
-            </Txt>
-            <Txt kind="caps" muted style={{ marginTop: space[2] }}>Cycle</Txt>
+          <View style={{ gap: space[2] }}>
+            <SectionLabel>Cycle</SectionLabel>
             <Row>
               {(Object.keys(CYCLE_LABELS) as CycleKind[]).map((k) => (
                 <Chip key={k} label={CYCLE_LABELS[k]} selected={k === detail.program.cycle} />
               ))}
             </Row>
-          </Card>
+            {detail.program.cycle === "week" ? <WeekStrip sessions={detail.sessions} /> : null}
+          </View>
 
           {fresh && fresh.length > 0 && (
             <Card>
@@ -77,18 +83,25 @@ export function ProgramScreen() {
             </Card>
           )}
 
-          <Txt kind="caps" muted>Séances</Txt>
-          {detail.sessions.length === 0 && <Txt muted>Aucune séance. Ajoute la première.</Txt>}
-          {detail.sessions.map((s) => (
-            <SessionCard
-              key={s.id}
+          <View style={{ gap: space[2] }}>
+            <SectionLabel>Séances</SectionLabel>
+            {detail.sessions.length === 0 && <Txt muted>Aucune séance. Ajoute la première.</Txt>}
+            <Row>
+              {detail.sessions.map((s) => (
+                <Chip key={s.id} label={s.name} selected={s.id === picked?.id} onPress={() => setPickedId(s.id)} />
+              ))}
+            </Row>
+          </View>
+
+          {picked ? (
+            <SessionDetail
               cycle={detail.program.cycle}
-              session={s}
-              onAddExercise={() => setSheet({ kind: "exercise", sessionId: s.id })}
+              session={picked}
+              onAddExercise={() => setSheet({ kind: "exercise", sessionId: picked.id })}
               onEditExercise={(exercise) => setSheet({ kind: "editExercise", exercise })}
             />
-          ))}
-          <Button label="Ajouter une séance" kind="secondary" onPress={() => setSheet({ kind: "session" })} />
+          ) : null}
+          <Button label="Ajouter une séance" kind="secondary" icon="plus" onPress={() => setSheet({ kind: "session" })} />
           <Txt kind="caption" muted>
             Les modifications s'appliquent aux prochaines séances. Les séances passées restent figées.
           </Txt>
@@ -99,7 +112,7 @@ export function ProgramScreen() {
           <Txt muted>Crée ton premier programme pour voir tes séances au calendrier.</Txt>
         </Card>
       )}
-      <Button label="Nouveau programme" kind={detail ? "secondary" : "primary"} onPress={() => setSheet({ kind: "program" })} />
+      <Button label="Nouveau programme" kind={detail ? "ghost" : "primary"} large={!detail} onPress={() => setSheet({ kind: "program" })} />
 
       <StartingSheet visible={sheet?.kind === "starting"} onClose={close} exercises={fresh ?? []} />
       <ProgramSheet visible={sheet?.kind === "program"} onClose={close} />
@@ -121,7 +134,39 @@ export function ProgramScreen() {
   );
 }
 
-function SessionCard({
+/** The week at a glance: which day each Session falls on. */
+function WeekStrip({ sessions }: { sessions: ProgramDetail["sessions"] }) {
+  const c = useColors();
+  const bySlot = new Map(sessions.map((s) => [s.slot, s]));
+  return (
+    <View style={{ flexDirection: "row", gap: space[1] }}>
+      {Array.from({ length: 7 }, (_, i) => {
+        const s = bySlot.get(i);
+        return (
+          <View key={i} style={{ flex: 1, gap: space[1], alignItems: "center" }}>
+            <Txt kind="caps" muted>{["L", "M", "M", "J", "V", "S", "D"][i]}</Txt>
+            <View
+              style={{
+                alignSelf: "stretch",
+                height: size.tapMin,
+                borderRadius: radius.sm,
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: s ? c.surfaceRaised : c.surfaceSunken,
+                borderWidth: s ? 1.5 : 0,
+                borderColor: c.lineStrong,
+              }}
+            >
+              <Txt kind="heading" muted={!s}>{s ? s.name.trim().split(/\s+/).pop()!.slice(0, 1).toUpperCase() : "·"}</Txt>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+function SessionDetail({
   cycle,
   session,
   onAddExercise,
@@ -137,35 +182,48 @@ function SessionCard({
   const { repo } = useStore();
   const sets = session.exercises.reduce((n, e) => n + e.sets, 0);
   return (
-    <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <View style={{ flex: 1 }}>
-          <Txt kind="heading">{session.name}</Txt>
-          <Txt muted>
-            {slotLabel(cycle, session.slot)} · {plural(session.exercises.length, "exercice", "exercices")} · {plural(sets, "série", "séries")}
-          </Txt>
-        </View>
-        <Chip label="Supprimer" tone="danger" onPress={() => act(() => repo.removeSession(session.id))} />
-      </View>
-      {session.exercises.map((e) => (
-        <Pressable
-          key={e.id}
-          accessibilityRole="button"
-          accessibilityLabel={`Modifier ${e.name}`}
-          onPress={() => onEditExercise(e)}
-          style={{ flexDirection: "row", gap: space[3], paddingVertical: space[2], borderTopWidth: 1, borderTopColor: c.line }}
-        >
-          <Txt kind="heading" style={{ width: 24 }}>{e.position}</Txt>
-          <View style={{ flex: 1 }}>
-            <Txt kind="strong">{e.name}</Txt>
-            <Txt kind="caption" muted>
-              {plural(e.sets, "série", "séries")} · {GOAL_LABELS[e.goal]}
-            </Txt>
-          </View>
-        </Pressable>
-      ))}
-      <Button label="Ajouter un exercice" kind="secondary" small onPress={onAddExercise} />
-    </Card>
+    <View style={{ gap: space[3] }}>
+      <Txt muted>
+        {slotLabel(cycle, session.slot)} · {plural(session.exercises.length, "exercice", "exercices")} · {plural(sets, "série", "séries")}
+      </Txt>
+      {session.exercises.map((e) => {
+        const [lo, hi] = DEFAULT_RULES.goals[e.goal].reps_range;
+        return (
+          <Pressable
+            key={e.id}
+            accessibilityRole="button"
+            accessibilityLabel={`Modifier ${e.name}`}
+            onPress={() => onEditExercise(e)}
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              gap: space[3],
+              padding: space[3],
+              backgroundColor: c.surfaceRaised,
+              borderRadius: radius.lg,
+              borderWidth: 1,
+              borderColor: c.line,
+            }}
+          >
+            <View style={{ width: 36, height: 36, borderRadius: radius.sm, backgroundColor: c.surfaceSunken, alignItems: "center", justifyContent: "center" }}>
+              <Txt kind="titleSm">{e.position}</Txt>
+            </View>
+            <View style={{ flex: 1, gap: space[1] }}>
+              <Txt kind="strong">{e.name}</Txt>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space[2], flexWrap: "wrap" }}>
+                <GoalBadge goal={e.goal} label={GOAL_LABELS[e.goal]} />
+                <Txt kind="caption" muted>
+                  {plural(e.sets, "série", "séries")} · {lo}-{hi} reps · {EQUIPMENT_LABELS[e.equipment] ?? e.equipment}
+                </Txt>
+              </View>
+            </View>
+            <Icon name="next" color={c.ink} size={size.iconSm} />
+          </Pressable>
+        );
+      })}
+      <Button label="Ajouter un exercice" kind="secondary" onPress={onAddExercise} />
+      <Button label="Supprimer la séance" kind="ghost" small onPress={() => act(() => repo.removeSession(session.id))} />
+    </View>
   );
 }
 
