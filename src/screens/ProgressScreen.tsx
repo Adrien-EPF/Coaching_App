@@ -1,15 +1,15 @@
 import React, { useState } from "react";
-import { View } from "react-native";
+import { Text, View } from "react-native";
 import { useAction, useQuery, useStore } from "../data/RepoContext";
 import type { ExerciseProgress } from "../data/repo";
 import { todayIso } from "../domain/dates";
 import { shortDate } from "../domain/format";
-import { Button, Card, Chip, ErrorText, Row, Screen, Txt } from "../ui/kit";
-import { space, useColors } from "../ui/theme";
+import { Button, Card, Chip, ErrorText, ListCard, Row, Screen, Txt } from "../ui/kit";
+import { fonts, radius, space, useColors } from "../ui/theme";
 import { AdherenceCard } from "./AdherenceCard";
 import { ObjectivesCard } from "./ObjectivesCard";
 
-const fmtKg = (n: number) => `${String(Math.round(n * 10) / 10).replace(".", ",")} kg`;
+const fmtNum = (n: number) => String(Math.round(n * 10) / 10).replace(".", ",");
 
 export function ProgressScreen() {
   const { repo } = useStore();
@@ -30,18 +30,6 @@ export function ProgressScreen() {
         </Card>
       ) : (
         <>
-          <Button
-            label={busy ? "Estimation en cours…" : "Estimer les 1RM avec Gemini"}
-            kind="secondary"
-            disabled={busy}
-            onPress={async () => {
-              setBusy(true);
-              setError(null);
-              await act(() => repo.estimateOneRepMaxesWithGemini(todayIso()), setError);
-              setBusy(false);
-            }}
-          />
-          <ErrorText message={error} />
           <Row>
             <Chip label="Tous" selected={picked === null} onPress={() => setPicked(null)} />
             {progress.map((p) => (
@@ -52,6 +40,19 @@ export function ProgressScreen() {
             <ExerciseRecords key={p.exerciseId} progress={p} />
           ))}
           <Txt kind="caption" muted>1RM estimé avec Epley, ou par Gemini quand tu le demandes. Sur la charge soulevée uniquement.</Txt>
+          <Button
+            label={busy ? "Estimation en cours…" : "Estimer les 1RM avec Gemini"}
+            kind="secondary"
+            small
+            disabled={busy}
+            onPress={async () => {
+              setBusy(true);
+              setError(null);
+              await act(() => repo.estimateOneRepMaxesWithGemini(todayIso()), setError);
+              setBusy(false);
+            }}
+          />
+          <ErrorText message={error} />
         </>
       )}
       <ObjectivesCard />
@@ -63,28 +64,47 @@ export function ProgressScreen() {
 function ExerciseRecords({ progress }: { progress: ExerciseProgress }) {
   const c = useColors();
   const gemini = progress.geminiOneRepMax;
+  const today = todayIso();
   return (
-    <Card>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: space[3] }}>
-        <Txt kind="heading" style={{ flex: 1 }}>{progress.name}</Txt>
-        <View style={{ alignItems: "flex-end" }}>
-          <Txt kind="caps" muted>{gemini ? "1RM estimé · Gemini" : "1RM estimé"}</Txt>
-          <Txt kind="heading">{fmtKg(gemini ? gemini.value : progress.estimatedOneRepMax)}</Txt>
-          {gemini && <Txt kind="caption" muted>Epley : {fmtKg(progress.estimatedOneRepMax)}</Txt>}
+    <View style={{ gap: space[3] }}>
+      <Card>
+        <Txt kind="caps" muted>{progress.name} · {gemini ? "1RM estimé par Gemini" : "1RM estimé"}</Txt>
+        <View style={{ flexDirection: "row", alignItems: "baseline", gap: space[2] }}>
+          <Text style={{ fontFamily: fonts.display, fontSize: 72, lineHeight: 72, color: c.ink, fontVariant: ["tabular-nums"] }}>
+            {fmtNum(gemini ? gemini.value : progress.estimatedOneRepMax)}
+          </Text>
+          <Text style={{ fontFamily: fonts.displayBold, fontSize: 24, color: c.ink, textTransform: "uppercase" }}>kg</Text>
         </View>
-      </View>
-      {gemini?.why ? <Txt kind="caption" muted>{gemini.why}</Txt> : null}
-      <Txt kind="caps" muted>PR par nombre de reps</Txt>
-      {progress.records.map((r) => (
-        <View
-          key={r.reps}
-          style={{ flexDirection: "row", alignItems: "center", gap: space[3], paddingVertical: space[2], borderTopWidth: 1, borderTopColor: c.line }}
-        >
-          <Txt kind="heading" style={{ width: 44 }}>{r.reps}</Txt>
-          <Txt kind="strong" style={{ flex: 1 }}>{fmtKg(r.weight)}</Txt>
-          <Txt kind="caption" muted>{shortDate(r.date)}</Txt>
-        </View>
-      ))}
-    </Card>
+        {gemini ? <Txt kind="caption" muted>Epley : {fmtNum(progress.estimatedOneRepMax)} kg</Txt> : null}
+        {gemini?.why ? <Txt kind="caption" muted>{gemini.why}</Txt> : null}
+      </Card>
+      <ListCard header="PR par nombre de reps">
+        {progress.records.map((r) => {
+          const fresh = r.date === today;
+          return (
+            <View
+              key={r.reps}
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: space[3],
+                paddingHorizontal: space[4],
+                paddingVertical: space[3],
+                backgroundColor: fresh ? c.limeSoft : "transparent",
+              }}
+            >
+              <Txt kind="caps" muted style={{ width: 64 }}>{r.reps} {r.reps === 1 ? "rep" : "reps"}</Txt>
+              <Txt kind="heading" style={{ flex: 1 }}>{fmtNum(r.weight)} kg</Txt>
+              <Txt kind="caption" muted>{fresh ? "Aujourd'hui" : shortDate(r.date)}</Txt>
+              {fresh ? (
+                <View style={{ backgroundColor: c.lime, borderRadius: radius.sm, paddingHorizontal: space[2], paddingVertical: 2 }}>
+                  <Txt kind="caps" style={{ color: c.onLime }}>PR</Txt>
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
+      </ListCard>
+    </View>
   );
 }

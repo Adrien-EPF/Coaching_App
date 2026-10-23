@@ -46,8 +46,8 @@ export function ObjectiveSheet({ visible, onClose }: { visible: boolean; onClose
       <Field label="D'ici le (JJ/MM/AAAA)" value={byDate} onChangeText={(t) => setByDate(maskFr(t))} placeholder="01/03/2027" keyboardType="number-pad" />
       <Txt kind="caption" muted>Gemini en tient compte comme contexte, sans jamais dépasser tes garde-fous.</Txt>
       <ErrorText message={error} />
-      <Button label="Ajouter l'objectif" onPress={submit} />
-      <Button label="Annuler" kind="secondary" onPress={onClose} />
+      <Button large label="Ajouter l'objectif" onPress={submit} />
+      <Button label="Annuler" kind="ghost" onPress={onClose} />
     </Sheet>
   );
 }

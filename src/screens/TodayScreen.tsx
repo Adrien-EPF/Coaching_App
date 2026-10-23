@@ -7,8 +7,9 @@ import { addDays, todayIso } from "../domain/dates";
 import { longDate, plural } from "../domain/format";
 import type { RootParams } from "../navigation";
 import { TIMED } from "../rules/rules";
-import { Button, Card, ErrorText, Screen, Txt } from "../ui/kit";
-import { space } from "../ui/theme";
+import { Icon } from "../ui/icons";
+import { Button, Card, ErrorText, GoalBadge, IconButton, ListCard, RecommendationNote, Screen, Slab, StatusBadge, Txt } from "../ui/kit";
+import { size, space, useColors } from "../ui/theme";
 import { GOAL_LABELS } from "./ProgramScreen";
 import { ProblemSheet } from "./ProblemSheet";
 
@@ -38,8 +39,26 @@ export function TodayScreen() {
   }, [today]);
   const rest = useQuery(async (repo) => (await repo.getCalendar(today, today, today))[0].items.find((i) => i.type !== "planned"));
 
+  const program = useQuery((r) => r.getActiveProgram());
+  const c = useColors();
+  const isToday = plan?.date === today;
+
   return (
-    <Screen title="Aujourd'hui" subtitle={longDate(today)}>
+    <Screen
+      title={plan ? plan.item.name : "Aujourd'hui"}
+      subtitle={plan ? undefined : longDate(today)}
+      lead={plan && program ? `${program.name} · ${plural(plan.item.setCount, "série", "séries")} aujourd'hui` : undefined}
+      left={
+        plan ? (
+          <View style={{ flexDirection: "row", alignItems: "center", gap: space[2], flexWrap: "wrap" }}>
+            <Txt kind="caps" muted>{longDate(plan.date)}</Txt>
+            {isToday ? <StatusBadge state="today" /> : <StatusBadge state="planned" />}
+          </View>
+        ) : undefined
+      }
+      right={<IconButton icon="sliders" label="Réglages" onPress={() => navigation.navigate("Réglages")} style={{ marginRight: -space[3] }} />}
+      brand
+    >
       {plan === undefined ? null : plan === null ? (
         <Card>
           <Txt kind="heading">Pas de séance prévue</Txt>
@@ -47,20 +66,18 @@ export function TodayScreen() {
         </Card>
       ) : (
         <>
-          <Card>
-            <Txt kind="caps" muted>{plan.date === today ? "Séance du jour" : `Prochaine séance · ${longDate(plan.date)}`}</Txt>
-            <Txt kind="heading">{plan.item.name}</Txt>
-            <Txt muted>
-              {plural(plan.item.exerciseCount, "exercice", "exercices")} · {plural(plan.item.setCount, "série", "séries")}
-            </Txt>
-          </Card>
-          {plan.date <= today ? (
-            <Button label="Commencer la séance" onPress={() => navigation.navigate("Log", { programSessionId: plan.item.sessionId, date: plan.date })} />
+          {plan.stored?.summary ? (
+            <Slab overline="Cette séance">
+              <Txt kind="bodyLg" style={{ color: c.onContrast }}>{plan.stored.summary}</Txt>
+            </Slab>
           ) : null}
-          <Button label="Signaler un problème" kind="secondary" onPress={() => setReporting(true)} />
+          {plan.stored?.note ? <Txt kind="caption" muted>{plan.stored.note}</Txt> : null}
           {plan.reports.map((r) => (
-            <Card key={r.id}>
-              <Txt kind="caps" muted>Problème signalé</Txt>
+            <Card key={r.id} style={{ borderColor: c.warning }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: space[2] }}>
+                <Icon name="alert" color={c.warningInk} size={size.iconSm} />
+                <Txt kind="caps" style={{ color: c.warningInk }}>Problème signalé</Txt>
+              </View>
               <Txt>{[r.kinds.join(", "), r.details].filter(Boolean).join(" · ")}</Txt>
               <Button
                 label={replanning ? "Replanification…" : "Annuler ce problème et replanifier"}
@@ -79,8 +96,14 @@ export function TodayScreen() {
               />
             </Card>
           ))}
-          <Txt kind="caps" muted>Plan de la séance</Txt>
-          {plan.stored?.note ? <Txt kind="caption" muted>{plan.stored.note}</Txt> : null}
+          <ListCard
+            header="Plan de la séance"
+            aside={`${plural(plan.item.exerciseCount, "exercice", "exercices")} · ${plural(plan.item.setCount, "série", "séries")}`}
+          >
+            {plan.exercises.map((e) => (
+              <ExerciseRow key={e.id} e={e} planned={plan.stored?.date === plan.date ? plan.stored.exercises.find((p) => p.exerciseId === e.exerciseId) : undefined} />
+            ))}
+          </ListCard>
           {plan.stored?.source !== "gemini" ? (
             <Button
               label={replanning ? "Gemini réfléchit…" : "Replanifier avec Gemini"}
@@ -96,9 +119,10 @@ export function TodayScreen() {
             />
           ) : null}
           <ErrorText message={replanError} />
-          {plan.exercises.map((e) => (
-            <ExerciseRow key={e.id} e={e} planned={plan.stored?.date === plan.date ? plan.stored.exercises.find((p) => p.exerciseId === e.exerciseId) : undefined} />
-          ))}
+          {plan.date <= today ? (
+            <Button large label="Commencer la séance" onPress={() => navigation.navigate("Log", { programSessionId: plan.item.sessionId, date: plan.date })} />
+          ) : null}
+          <Button kind="ghost" label="Signaler un problème" onPress={() => setReporting(true)} />
           <ProblemSheet
             target={reporting ? { programSessionId: plan.item.sessionId, name: plan.item.name, date: plan.date } : null}
             onClose={() => setReporting(false)}
@@ -116,26 +140,33 @@ export function TodayScreen() {
 }
 
 function ExerciseRow({ e, planned }: { e: SessionExercise; planned?: StoredPlan["exercises"][number] }) {
+  const c = useColors();
+  const load = planned ? (planned.weight === null ? null : `${String(planned.weight).replace(".", ",")} kg`) : null;
+  const reps = planned ? (planned.equipment === TIMED ? `${planned.reps} s` : String(planned.reps)) : null;
   return (
-    <Card>
-      <View style={{ flexDirection: "row", gap: space[3] }}>
-        <Txt kind="heading" style={{ width: 24 }}>{e.position}</Txt>
-        <View style={{ flex: 1 }}>
+    <View style={{ padding: space[4], gap: space[3] }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space[3] }}>
+        <Txt kind="heading" muted style={{ width: 24 }}>{e.position}</Txt>
+        <View style={{ flex: 1, gap: space[1] }}>
           <Txt kind="strong">{e.name}</Txt>
-          <Txt kind="caption" muted>
-            {plural(e.sets, "série", "séries")} · {GOAL_LABELS[e.goal]}
-          </Txt>
+          <GoalBadge goal={e.goal} label={GOAL_LABELS[e.goal]} />
+        </View>
+        <View style={{ alignItems: "flex-end" }}>
           {planned ? (
-            <Txt kind="caption">
-              Prévu : {planned.weight === null ? "" : `${String(planned.weight).replace(".", ",")} kg · `}
-              {planned.sets} × {planned.equipment === TIMED ? `${planned.reps} s` : planned.reps}
+            <Txt kind="heading">
+              {load ? `${load} ` : ""}
+              <Txt kind="heading" muted>×</Txt> {reps}
             </Txt>
-          ) : null}
-          {planned?.warnings.map((w) => (
-            <Txt key={w} kind="caption" muted>{w}</Txt>
-          ))}
+          ) : (
+            <Txt kind="caption" muted>{plural(e.sets, "série", "séries")}</Txt>
+          )}
+          {planned ? <Txt kind="caption" muted>{plural(planned.sets, "série", "séries")}</Txt> : null}
         </View>
       </View>
-    </Card>
+      {planned?.reason ? <RecommendationNote text={planned.reason} flag={planned.warnings[0]} /> : null}
+      {!planned?.reason && planned?.warnings.map((w) => (
+        <Txt key={w} kind="caption" style={{ color: c.warningInk }}>{w}</Txt>
+      ))}
+    </View>
   );
 }

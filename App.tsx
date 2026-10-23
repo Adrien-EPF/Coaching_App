@@ -4,14 +4,14 @@ import {
   Barlow_600SemiBold,
   Barlow_700Bold,
 } from "@expo-google-fonts/barlow";
-import { SofiaSansCondensed_700Bold, SofiaSansCondensed_800ExtraBold } from "@expo-google-fonts/sofia-sans-condensed";
+import { SofiaSansCondensed_600SemiBold, SofiaSansCondensed_700Bold, SofiaSansCondensed_800ExtraBold } from "@expo-google-fonts/sofia-sans-condensed";
 import { DarkTheme, DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useFonts } from "expo-font";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { applyAppearance, getAppearance } from "./src/config/appearance";
 import { RepoProvider } from "./src/data/RepoContext";
@@ -22,7 +22,8 @@ import { ProgramScreen } from "./src/screens/ProgramScreen";
 import { ProgressScreen } from "./src/screens/ProgressScreen";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { TodayScreen } from "./src/screens/TodayScreen";
-import { fonts, useColors, useIsDark } from "./src/ui/theme";
+import { Icon, IconName } from "./src/ui/icons";
+import { fonts, radius, useColors, useIsDark } from "./src/ui/theme";
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootParams>();
@@ -36,26 +37,47 @@ function Loading() {
   );
 }
 
+const TAB_ICONS: Record<string, IconName> = {
+  "Séance": "session",
+  Calendrier: "calendar",
+  Programme: "list",
+  "Progrès": "trend",
+};
+
 function Tabs() {
   const c = useColors();
   return (
-      <Tab.Navigator
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: c.ink,
-          tabBarInactiveTintColor: c.inkMuted,
-          tabBarLabelStyle: { fontFamily: fonts.sansBold, fontSize: 12 },
-          tabBarIconStyle: { display: "none" },
-          tabBarItemStyle: { justifyContent: "center" },
-          tabBarStyle: { backgroundColor: c.surfaceRaised, borderTopColor: c.line },
-        }}
-      >
-        <Tab.Screen name="Séance" component={TodayScreen} />
-        <Tab.Screen name="Calendrier" component={CalendarScreen} />
-        <Tab.Screen name="Programme" component={ProgramScreen} />
-        <Tab.Screen name="Progrès" component={ProgressScreen} />
-        <Tab.Screen name="Réglages" component={SettingsScreen} />
-      </Tab.Navigator>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: c.ink,
+        tabBarInactiveTintColor: c.inkMuted,
+        tabBarLabel: ({ color, children }) => (
+          <Text style={{ fontFamily: fonts.displayBold, fontSize: 13, letterSpacing: 1, textTransform: "uppercase", color }}>{children}</Text>
+        ),
+        tabBarIcon: ({ focused }) => (
+          <View
+            style={{
+              width: 56,
+              height: 32,
+              borderRadius: radius.pill,
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: focused ? c.contrast : "transparent",
+            }}
+          >
+            <Icon name={TAB_ICONS[route.name]} color={focused ? c.onContrast : c.inkMuted} size={22} />
+          </View>
+        ),
+        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.line, height: 76, paddingTop: 8, paddingBottom: 8 },
+        tabBarItemStyle: { gap: 2 },
+      })}
+    >
+      <Tab.Screen name="Séance" component={TodayScreen} />
+      <Tab.Screen name="Calendrier" component={CalendarScreen} />
+      <Tab.Screen name="Programme" component={ProgramScreen} />
+      <Tab.Screen name="Progrès" component={ProgressScreen} />
+    </Tab.Navigator>
   );
 }
 
@@ -68,6 +90,7 @@ function Root() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Tabs" component={Tabs} />
         <Stack.Screen name="Log" component={LogScreen} />
+        <Stack.Screen name="Réglages" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -79,6 +102,7 @@ export default function App() {
     Barlow_500Medium,
     Barlow_600SemiBold,
     Barlow_700Bold,
+    SofiaSansCondensed_600SemiBold,
     SofiaSansCondensed_700Bold,
     SofiaSansCondensed_800ExtraBold,
   });

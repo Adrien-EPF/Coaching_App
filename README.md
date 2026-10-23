@@ -1,8 +1,8 @@
 <div align="center">
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./Design/coaching-app/design-system/assets/Logos/coaching-app-lockup-inverse.svg">
-  <img alt="Coaching App" src="./Design/coaching-app/design-system/assets/Logos/coaching-app-lockup.svg" width="360">
+  <source media="(prefers-color-scheme: dark)" srcset="./coaching-app-design/coaching-app/design-system/assets/Logos/coaching-app-lockup-inverse.svg">
+  <img alt="Coaching App" src="./coaching-app-design/coaching-app/design-system/assets/Logos/coaching-app-lockup.svg" width="360">
 </picture>
 
 <br><br>
@@ -203,7 +203,7 @@ When the smallest step is larger than the planned percentage, double progression
 
 ## Screens
 
-Thirteen screens are designed, in French, in [`Design/coaching-app/screens`](./Design/coaching-app/screens).
+Thirteen screens are designed, in French, in [`coaching-app-design/coaching-app/ecrans`](./coaching-app-design/coaching-app/ecrans).
 
 | Screen | Purpose | Issue |
 |---|---|:-:|
@@ -241,7 +241,7 @@ Bold and athletic: a scoreboard of big condensed numbers on calm grounds, with o
 
 **Components:** Button, GoalBadge, SessionStatus, SetRow, RpePicker, ExerciseCard, RecommendationNote, PrStat.
 
-Everything lives in [`Design/coaching-app`](./Design/coaching-app): the [design system](./Design/coaching-app/design-system) (tokens, components, fonts, logos; its [README](./Design/coaching-app/design-system/README.md) holds the full content and visual rules) and the [screens](./Design/coaching-app/screens).
+Everything lives in [`coaching-app-design/coaching-app`](./coaching-app-design/coaching-app): the [design system](./coaching-app-design/coaching-app/design-system) (tokens, components, fonts, logos; its [README](./coaching-app-design/coaching-app/design-system/README.md) holds the full content and visual rules) and the [screens](./coaching-app-design/coaching-app/ecrans).
 
 <br>
 

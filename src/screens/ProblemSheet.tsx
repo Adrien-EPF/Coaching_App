@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from "react";
+import { View } from "react-native";
 import { useAction, useStore } from "../data/RepoContext";
 import type { IsoDate } from "../domain/dates";
 import { longDate } from "../domain/format";
-import { Button, ErrorText, Field, Row, Sheet, Txt, Chip } from "../ui/kit";
+import { Icon } from "../ui/icons";
+import { Button, Chip, ErrorText, Field, Row, Sheet, Txt } from "../ui/kit";
+import { radius, size, space, useColors } from "../ui/theme";
 
 export const PROBLEM_KINDS = ["Mauvais sommeil", "Douleur", "Fatigue", "Malade", "Stress", "Autre"];
 
@@ -14,6 +17,7 @@ export function ProblemSheet({
   target: { programSessionId: number; name: string; date: IsoDate } | null;
   onClose: () => void;
 }) {
+  const c = useColors();
   const { repo } = useStore();
   const act = useAction();
   const [kinds, setKinds] = useState<string[]>([]);
@@ -38,21 +42,24 @@ export function ProblemSheet({
   };
 
   return (
-    <Sheet visible title="Signaler un problème" onClose={onClose}>
-      <Txt muted>
-        {target.name} · {longDate(target.date)}. Le plan de cette séance sera recalculé avec ta note.
-      </Txt>
-      <Txt kind="caps" muted>Ce qui ne va pas</Txt>
-      <Row>
-        {PROBLEM_KINDS.map((k) => (
-          <Chip key={k} label={k} selected={kinds.includes(k)} onPress={() => toggle(k)} />
-        ))}
-      </Row>
+    <Sheet visible overline={`${target.name} · ${longDate(target.date)}`} title="Signaler un problème" onClose={onClose}>
+      <Txt muted>Le plan de cette séance sera recalculé avec ta note.</Txt>
+      <View style={{ gap: space[2] }}>
+        <Txt kind="caps" muted>Ce qui ne va pas</Txt>
+        <Row>
+          {PROBLEM_KINDS.map((k) => (
+            <Chip key={k} label={k} selected={kinds.includes(k)} onPress={() => toggle(k)} />
+          ))}
+        </Row>
+      </View>
       <Field label="Précisions" value={details} onChangeText={setDetails} multiline placeholder="5 h de sommeil. Épaule droite un peu raide." style={{ minHeight: 96, textAlignVertical: "top", paddingTop: 12 }} />
-      <Txt kind="caption" muted>Avec un problème signalé, Gemini peut garder ou baisser les charges, jamais les monter.</Txt>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: space[3], backgroundColor: c.surfaceSunken, borderRadius: radius.md, padding: space[3] }}>
+        <Icon name="shield" color={c.ink} size={size.iconMd} />
+        <Txt kind="body" style={{ flex: 1 }}>Avec un problème signalé, Gemini peut garder ou baisser les charges, jamais les monter.</Txt>
+      </View>
       <ErrorText message={error} />
-      <Button label={busy ? "Replanification…" : "Replanifier la séance"} disabled={busy} onPress={submit} />
-      <Button label="Annuler" kind="secondary" onPress={onClose} />
+      <Button large label={busy ? "Replanification…" : "Replanifier la séance"} disabled={busy} onPress={submit} />
+      <Button label="Annuler" kind="ghost" onPress={onClose} />
     </Sheet>
   );
 }
