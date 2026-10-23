@@ -24,7 +24,7 @@ A personal Android app to track gym progress. After each session, Gemini and you
 
 <br>
 
-> **Status: v1 done.** All eleven slices are built and the app was tested on a real Android phone. See [Install](#install) to get the APK. Vocabulary lives in [CONTEXT.md](./CONTEXT.md), progression rules in [RULES.md](./RULES.md), decisions in [docs/adr](./docs/adr), and the work is tracked in the [issues](https://github.com/Adrien-EPF/Coaching_App/issues).
+> **Status: v1 done.** All eleven slices are built and the app was tested on a real Android phone. Download the APK from the [Releases](https://github.com/Adrien-EPF/Coaching_App/releases) page, see [Install](#install). Vocabulary lives in [CONTEXT.md](./CONTEXT.md), progression rules in [RULES.md](./RULES.md), decisions in [docs/adr](./docs/adr), and the work is tracked in the [issues](https://github.com/Adrien-EPF/Coaching_App/issues).
 
 <br>
 
@@ -249,7 +249,7 @@ Everything lives in [`coaching-app-design/coaching-app`](./coaching-app-design/c
 
 | | |
 |---|---|
-| **Platform** | Native Android app (Expo / React Native, TypeScript), built to an APK by a GitHub Action. |
+| **Platform** | Native Android app (Expo / React Native, TypeScript), built to an APK by a GitHub Action and published in Releases. |
 | **Data** | Local only (SQLite on the device), with JSON and CSV export. |
 | **Gemini** | Free API key stored on the device, one call per validated session. |
 | **Rules** | One versioned config file (structured rules, free-text principles, available increments), written separately with Claude Desktop. |
@@ -293,15 +293,21 @@ Gemini needed three fixes: a current model (Google now keeps the 2.5 models for 
 
 Trend charts, volume and frequency objectives, rest timer, bodyweight tracking, automatic evening-before planning, cloud sync and accounts, iOS.
 
+### Possible v2: running
+
+If there is a v2, it adds **running** next to lifting, with its own set of Rules, the way lifting has [RULES.md](./RULES.md). Running would not reuse the double progression on load: it needs its own Training Goals, its own progression model (distance, pace, volume per week), its own brakes and its own Guardrails, still applied after Gemini. The planning engine, the Guardrail principle and the rules-only fallback would stay the same.
+
 <br>
 
 ## Install
 
-The app is Android only and not on the Play Store. A GitHub Action builds the APK on every push to `main`.
+The app is Android only and not on the Play Store.
 
-1. Open the latest successful run of **Build APK** in the [Actions](https://github.com/Adrien-EPF/Coaching_App/actions) tab, signed in to GitHub.
-2. Download the `coaching-app-apk` artifact (a zip), unzip it and open `app-release.apk` on the phone.
-3. Allow installing from unknown apps when Android asks (on Samsung, turn off Auto Blocker if the install is blocked).
+1. Open the latest [Release](https://github.com/Adrien-EPF/Coaching_App/releases/latest) and download `coaching-app-vX.Y.Z.apk` on the phone.
+2. Open the file. Allow installing from unknown apps when Android asks (on Samsung, turn off Auto Blocker if the install is blocked).
+3. In **Réglages**, enter your free Gemini key (see [Setup](#setup)). The release APK has no key built in, since the repo is public.
+
+To build your own APK with the key built in, the **Build APK** GitHub Action runs on every push to `main` and uploads it as the `coaching-app-apk` artifact. Releases are built by pushing a tag like `v1.0.0`.
 
 Uninstall the old version first if the icon does not update. That erases the local data, so export a JSON before.
 
@@ -314,7 +320,7 @@ The Gemini key is free and stays on your device.
 3. In the app, **Réglages** has a **Tester la clé** button that shows Google's answer if the key is refused.
 4. The app reads a key entered in its settings first (kept in the device's secure storage), then falls back to `.env`. See [`src/config/geminiKey.ts`](./src/config/geminiKey.ts).
 
-A key set in `.env` is built into the APK, which is fine for a free key in a personal app. Do not share the APK.
+A key set in `.env` is built into the APK of your own builds, which is fine for a free key in a personal app. Do not share that APK. The public release has no key.
 
 <br>
 
@@ -326,10 +332,10 @@ A key set in `.env` is built into the APK, which is fine for a free key in a per
 ├── CONTEXT.md       the domain vocabulary
 ├── RULES.md         progression rules and Guardrails (the config the app reads)
 ├── docs/adr/        architecture decisions
-├── Design/
+├── coaching-app-design/
 │   └── coaching-app/
 │       ├── design-system/   tokens, components, fonts, logos
-│       └── screens/         the 13 designed screens
+│       └── ecrans/          the designed screens
 ├── App.tsx          app entry: fonts, database, tab navigation
 ├── src/
 │   ├── config/      Gemini key loading
@@ -338,7 +344,7 @@ A key set in `.env` is built into the APK, which is fine for a free key in a per
 │   ├── screens/     Séance, Calendrier, Programme, Progrès
 │   └── ui/          design tokens and components
 ├── test/            behavior tests against a real in-memory SQLite
-├── .github/         workflow that builds the APK
+├── .github/         workflows: build the APK, publish a Release on a tag
 └── .env.example     template for your local .env
 ```
 

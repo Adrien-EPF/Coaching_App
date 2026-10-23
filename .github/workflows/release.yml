@@ -1,0 +1,33 @@
+name: Release APK
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx expo prebuild --platform android --no-install
+      # Built without a Gemini key on purpose: the repo is public, so the key is entered in Réglages.
+      - run: ./gradlew assembleRelease --no-daemon
+        working-directory: android
+      - run: mv android/app/build/outputs/apk/release/app-release.apk "coaching-app-${GITHUB_REF_NAME}.apk"
+      - run: gh release create "$GITHUB_REF_NAME" "coaching-app-${GITHUB_REF_NAME}.apk" --title "Coaching App ${GITHUB_REF_NAME}" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
