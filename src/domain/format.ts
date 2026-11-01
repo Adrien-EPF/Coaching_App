@@ -18,6 +18,12 @@ export function shortDate(iso: IsoDate): string {
   return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
+/** "17 oct." */
+export function tinyDate(iso: IsoDate): string {
+  const d = toDate(iso);
+  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()].slice(0, 3)}.`;
+}
+
 export function isIsoDate(text: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false;
   const d = toDate(text);
@@ -43,6 +49,9 @@ export function maskFr(text: string): string {
   const d = text.replace(/\D/g, "").slice(0, 8);
   return [d.slice(0, 2), d.slice(2, 4), d.slice(4)].filter(Boolean).join("/");
 }
+
+/** 102.5 -> "102,5" */
+export const fmtNum = (n: number) => String(Math.round(n * 10) / 10).replace(".", ",");
 
 export function plural(n: number, one: string, many: string): string {
   return `${n} ${n === 1 ? one : many}`;

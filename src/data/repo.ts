@@ -6,6 +6,7 @@ import { Db, first } from "./db";
 import type { Generate } from "../planner/gemini";
 import { adherence } from "../domain/adherence";
 import { Cardio } from "./cardio";
+import { Charts } from "./charts";
 import { Logbook } from "./logbook";
 import { Objectives } from "./objectives";
 import { Starting } from "./starting";
@@ -13,6 +14,7 @@ import { Starting } from "./starting";
 export type { Estimate, NewExercise, StartingEntry } from "./starting";
 export type { NewObjective, Objective } from "./objectives";
 export type { CardioInput, CardioLog } from "./cardio";
+export type { ExerciseHistory } from "./charts";
 
 export type { ExerciseLogDetail, ExerciseProgress, ProblemReport, NumbersLogged, SessionLogDetail, SetLogDetail, StoredPlan } from "./logbook";
 
@@ -102,6 +104,8 @@ export class Repo {
 
   private cardio: Cardio;
 
+  private charts: Charts;
+
   /** `gemini` gives the call to plan with at each planning, or null when there is no key. */
   constructor(
     private db: Db,
@@ -110,6 +114,7 @@ export class Repo {
   ) {
     this.objectives = new Objectives(db);
     this.cardio = new Cardio(db);
+    this.charts = new Charts(db);
     this.logbook = new Logbook(db, rules, this, gemini);
     this.starting = new Starting(db, rules, this, this.logbook, gemini);
   }
@@ -144,6 +149,10 @@ export class Repo {
   findCardio: Cardio["find"] = (...a) => this.cardio.find(...a);
   removeCardio: Cardio["remove"] = (...a) => this.cardio.remove(...a);
   listSports: Cardio["sports"] = () => this.cardio.sports();
+
+  // --- Progress charts (see Charts) ---
+  getExerciseHistory: Charts["exerciseHistory"] = (...a) => this.charts.exerciseHistory(...a);
+  getActivity: Charts["activity"] = () => this.charts.activity();
 
   // --- Objectives (see Objectives) ---
   addObjective: Objectives["add"] = (...a) => this.objectives.add(...a);
