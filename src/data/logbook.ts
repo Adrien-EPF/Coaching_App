@@ -172,7 +172,7 @@ export class Logbook {
     }
     for (const ex of exercises) {
       ex.notCompleted = ex.sets.every((s) => s.notCompleted);
-      const last = await this.lastNumbers(ex.exerciseId, logId, log.date);
+      const last = await this.lastNumbers(ex.exerciseId, ex.goal, logId, log.date);
       for (const s of ex.sets) s.last = last.get(s.index) ?? null;
     }
     const remaining = exercises.reduce((n, e) => n + e.sets.filter((s) => !s.notCompleted && s.reps === null).length, 0);
@@ -453,13 +453,14 @@ export class Logbook {
     return sessions;
   }
 
-  private async lastNumbers(exerciseId: number, excludeLogId: number, onOrBefore: IsoDate): Promise<Map<number, NumbersLogged>> {
+  /** The numbers of the last validated Session done with the same Training Goal: strength and hypertrophy loads are not comparable. */
+  private async lastNumbers(exerciseId: number, goal: GoalKey, excludeLogId: number, onOrBefore: IsoDate): Promise<Map<number, NumbersLogged>> {
     const last = await first<{ id: number }>(
       this.db,
       `SELECT sl.id FROM set_log s JOIN session_log sl ON sl.id = s.session_log_id
-        WHERE s.exercise_id = ? AND sl.status = 'validated' AND sl.id != ? AND sl.date <= ?
+        WHERE s.exercise_id = ? AND s.goal = ? AND sl.status = 'validated' AND sl.id != ? AND sl.date <= ?
         ORDER BY sl.date DESC, sl.id DESC LIMIT 1`,
-      [exerciseId, excludeLogId, onOrBefore],
+      [exerciseId, goal, excludeLogId, onOrBefore],
     );
     const result = new Map<number, NumbersLogged>();
     if (!last) return result;
