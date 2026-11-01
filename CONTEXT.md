@@ -12,8 +12,16 @@ _Avoid_: Routine, plan
 The repeating span of a **Program**: 1 week (default), 2 weeks, or 1 month.
 
 **Session**:
-One planned workout on a calendar day, made of **Exercises**.
+One planned activity on a calendar day. It has a **Session Type**; a strength **Session** is made of **Exercises**.
 _Avoid_: Workout
+
+**Session Type**:
+What kind of **Session** it is: Strength or Cardio. Chosen when a **Session** is added to a **Program**, and a single **Program** can mix types. Every **Session** that existed before types were introduced is a Strength **Session**.
+_Avoid_: Discipline
+
+**Cardio Session**:
+A **Session** of type Cardio: any sport you do (running, cycling, swimming, tennis, boxing, volleyball...) logged with its duration and intensity, so the athlete sees their whole sporting week. Nothing is recommended or tracked for progression: no **Rules**, no **Recommendation**, and Gemini does not use it. It can be planned in the **Program** or logged as an **Unplanned Session**.
+_Avoid_: Running or Cycling session (they are sports, entered inside a Cardio **Session**)
 
 **Exercise**:
 A movement within a **Session** (e.g. weighted pull-up) with a prescribed number of **Sets** and one **Training Goal**. A bodyweight movement and its weighted version are two distinct Exercises (pull-up and weighted pull-up).
