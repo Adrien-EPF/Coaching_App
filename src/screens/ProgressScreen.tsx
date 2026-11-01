@@ -1,15 +1,18 @@
+import { NavigationProp, useNavigation } from "@react-navigation/native";
 import React, { useState } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useAction, useQuery, useStore } from "../data/RepoContext";
 import type { ExerciseProgress } from "../data/repo";
 import { todayIso } from "../domain/dates";
-import { shortDate } from "../domain/format";
+import { fmtNum, shortDate } from "../domain/format";
+import type { RootParams } from "../navigation";
+import { Icon } from "../ui/icons";
 import { Button, Card, Chip, ErrorText, ListCard, Row, Screen, Txt } from "../ui/kit";
 import { fonts, radius, space, useColors } from "../ui/theme";
+import { ActivityCard } from "./ActivityCard";
 import { AdherenceCard } from "./AdherenceCard";
 import { ObjectivesCard } from "./ObjectivesCard";
 
-const fmtNum = (n: number) => String(Math.round(n * 10) / 10).replace(".", ",");
 
 export function ProgressScreen() {
   const { repo } = useStore();
@@ -23,6 +26,7 @@ export function ProgressScreen() {
 
   return (
     <Screen title="Progrès">
+      <ActivityCard />
       {progress === undefined ? null : progress.length === 0 ? (
         <Card>
           <Txt kind="heading">Pas encore de record</Txt>
@@ -63,21 +67,27 @@ export function ProgressScreen() {
 
 function ExerciseRecords({ progress }: { progress: ExerciseProgress }) {
   const c = useColors();
+  const navigation = useNavigation<NavigationProp<RootParams>>();
   const gemini = progress.geminiOneRepMax;
   const today = todayIso();
   return (
     <View style={{ gap: space[3] }}>
-      <Card>
-        <Txt kind="caps" muted>{progress.name} · {gemini ? "1RM estimé par Gemini" : "1RM estimé"}</Txt>
-        <View style={{ flexDirection: "row", alignItems: "baseline", gap: space[2] }}>
-          <Text style={{ fontFamily: fonts.display, fontSize: 72, lineHeight: 72, color: c.ink, fontVariant: ["tabular-nums"] }}>
-            {fmtNum(gemini ? gemini.value : progress.estimatedOneRepMax)}
-          </Text>
-          <Text style={{ fontFamily: fonts.displayBold, fontSize: 24, color: c.ink, textTransform: "uppercase" }}>kg</Text>
-        </View>
-        {gemini ? <Txt kind="caption" muted>Epley : {fmtNum(progress.estimatedOneRepMax)} kg</Txt> : null}
-        {gemini?.why ? <Txt kind="caption" muted>{gemini.why}</Txt> : null}
-      </Card>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${progress.name} : voir la courbe du 1RM`} onPress={() => navigation.navigate("Exercice", { exerciseId: progress.exerciseId })}>
+        <Card>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <Txt kind="caps" muted style={{ flex: 1 }}>{progress.name} · {gemini ? "1RM estimé par Gemini" : "1RM estimé"}</Txt>
+            <Icon name="next" color={c.inkMuted} size={20} />
+          </View>
+          <View style={{ flexDirection: "row", alignItems: "baseline", gap: space[2] }}>
+            <Text style={{ fontFamily: fonts.display, fontSize: 72, lineHeight: 72, color: c.ink, fontVariant: ["tabular-nums"] }}>
+              {fmtNum(gemini ? gemini.value : progress.estimatedOneRepMax)}
+            </Text>
+            <Text style={{ fontFamily: fonts.displayBold, fontSize: 24, color: c.ink, textTransform: "uppercase" }}>kg</Text>
+          </View>
+          {gemini ? <Txt kind="caption" muted>Epley : {fmtNum(progress.estimatedOneRepMax)} kg</Txt> : null}
+          {gemini?.why ? <Txt kind="caption" muted>{gemini.why}</Txt> : null}
+        </Card>
+      </Pressable>
       <ListCard header="PR par nombre de reps">
         {progress.records.map((r) => {
           const fresh = r.date === today;

@@ -11,6 +11,7 @@ const TABLES = [
   "occurrence",
   "day_entry",
   "session_log",
+  "cardio_log",
   "set_log",
   "session_plan",
   "plan_exercise",
@@ -31,15 +32,22 @@ export async function exportJson(db: Db): Promise<string> {
   return JSON.stringify({ app: APP, schemaVersion: await schemaVersion(db), exportedAt: new Date().toISOString(), tables }, null, 2);
 }
 
-/** The logged Sets, one row each, for a spreadsheet. */
+/** The logged Sets, one row each, then the cardio Sessions (sport in the exercise column), for a spreadsheet. */
 export async function exportCsv(db: Db): Promise<string> {
-  const header = ["date", "session", "status", "exercise", "goal", "set", "planned_weight", "planned_reps", "weight", "reps", "rpe", "not_completed"];
-  const rows = await db.all<Row>(
+  const header = ["date", "session", "status", "exercise", "goal", "set", "planned_weight", "planned_reps", "weight", "reps", "rpe", "not_completed", "type", "duration_min", "distance_km", "avg_hr"];
+  const sets = await db.all<Row>(
     `SELECT sl.date, sl.name AS session, sl.status, e.name AS exercise, s.goal, s.set_index + 1 AS "set",
-            s.planned_weight, s.planned_reps, s.weight, s.reps, s.rpe, s.not_completed
+            s.planned_weight, s.planned_reps, s.weight, s.reps, s.rpe, s.not_completed, sl.type
        FROM set_log s JOIN session_log sl ON sl.id = s.session_log_id JOIN exercise e ON e.id = s.exercise_id
       ORDER BY sl.date, sl.id, s.position, s.set_index`,
   );
+  const cardio = await db.all<Row>(
+    `SELECT sl.date, sl.name AS session, sl.status, c.sport AS exercise, c.rpe, 0 AS not_completed, sl.type,
+            c.duration_min, c.distance_km, c.avg_hr
+       FROM cardio_log c JOIN session_log sl ON sl.id = c.session_log_id
+      ORDER BY sl.date, sl.id`,
+  );
+  const rows = [...sets, ...cardio].sort((a, b) => (a.date! < b.date! ? -1 : a.date! > b.date! ? 1 : 0));
   const cell = (v: SqlValue | undefined) => (v === null || v === undefined ? "" : /[",\n]/.test(String(v)) ? `"${String(v).replace(/"/g, '""')}"` : String(v));
   return [header.join(","), ...rows.map((r) => header.map((h) => cell(r[h])).join(","))].join("\n") + "\n";
 }

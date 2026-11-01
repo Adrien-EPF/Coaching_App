@@ -16,6 +16,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { applyAppearance, getAppearance } from "./src/config/appearance";
 import { RepoProvider } from "./src/data/RepoContext";
 import type { RootParams } from "./src/navigation";
+import { CardioScreen } from "./src/screens/CardioScreen";
+import { ExerciseScreen } from "./src/screens/ExerciseScreen";
 import { LogScreen } from "./src/screens/LogScreen";
 import { CalendarScreen } from "./src/screens/CalendarScreen";
 import { ProgramScreen } from "./src/screens/ProgramScreen";
@@ -90,6 +92,8 @@ function Root() {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Tabs" component={Tabs} />
         <Stack.Screen name="Log" component={LogScreen} />
+        <Stack.Screen name="Cardio" component={CardioScreen} />
+        <Stack.Screen name="Exercice" component={ExerciseScreen} />
         <Stack.Screen name="Réglages" component={SettingsScreen} />
       </Stack.Navigator>
     </NavigationContainer>

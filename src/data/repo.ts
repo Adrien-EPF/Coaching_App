@@ -5,16 +5,23 @@ import { DEFAULT_RULES, Rules } from "../rules/rules";
 import { Db, first } from "./db";
 import type { Generate } from "../planner/gemini";
 import { adherence } from "../domain/adherence";
+import { Cardio } from "./cardio";
+import { Charts } from "./charts";
 import { Logbook } from "./logbook";
 import { Objectives } from "./objectives";
 import { Starting } from "./starting";
 
 export type { Estimate, NewExercise, StartingEntry } from "./starting";
 export type { NewObjective, Objective } from "./objectives";
+export type { CardioInput, CardioLog } from "./cardio";
+export type { ExerciseHistory } from "./charts";
 
 export type { ExerciseLogDetail, ExerciseProgress, ProblemReport, NumbersLogged, SessionLogDetail, SetLogDetail, StoredPlan } from "./logbook";
 
 export type TrainingGoal = "strength" | "endurance" | "hypertrophy";
+
+/** What kind of Session it is. An open value: new kinds can be added without touching the stored data. */
+export type SessionType = "strength" | "cardio";
 
 export interface Program {
   id: number;
@@ -28,6 +35,9 @@ export interface ProgramSession {
   programId: number;
   name: string;
   slot: number;
+  type: SessionType;
+  /** The sport planned for a cardio Session. */
+  sport: string | null;
 }
 
 export interface SessionExercise {
@@ -53,6 +63,9 @@ export type CalendarItem =
       type: "planned";
       sessionId: number;
       name: string;
+      sessionType: SessionType;
+      /** The sport planned for a cardio Session. */
+      sport: string | null;
       status: PlannedStatus;
       /** The date the Session was planned on when it was moved here. */
       movedFrom?: IsoDate;
@@ -63,7 +76,9 @@ export type CalendarItem =
       exerciseCount: number;
       setCount: number;
     }
-  | { type: "unplanned" | "rest" | "injury"; id: number; label: string | null };
+  | { type: "unplanned" | "rest" | "injury"; id: number; label: string | null }
+  /** A cardio Session done outside the Program. */
+  | { type: "cardio"; logId: number; sport: string; durationMin: number; rpe: number };
 
 export interface CalendarDay {
   date: IsoDate;
@@ -87,6 +102,10 @@ export class Repo {
 
   private objectives: Objectives;
 
+  private cardio: Cardio;
+
+  private charts: Charts;
+
   /** `gemini` gives the call to plan with at each planning, or null when there is no key. */
   constructor(
     private db: Db,
@@ -94,6 +113,8 @@ export class Repo {
     gemini: () => Promise<Generate | null> = async () => null,
   ) {
     this.objectives = new Objectives(db);
+    this.cardio = new Cardio(db);
+    this.charts = new Charts(db);
     this.logbook = new Logbook(db, rules, this, gemini);
     this.starting = new Starting(db, rules, this, this.logbook, gemini);
   }
@@ -121,6 +142,17 @@ export class Repo {
   reportProblem: Logbook["reportProblem"] = (...a) => this.logbook.reportProblem(...a);
   removeProblemReport: Logbook["removeProblemReport"] = (...a) => this.logbook.removeProblemReport(...a);
   getProblemReports: Logbook["getProblemReports"] = (...a) => this.logbook.getProblemReports(...a);
+
+  // --- Cardio Sessions (see Cardio) ---
+  logCardio: Cardio["log"] = (...a) => this.cardio.log(...a);
+  getCardio: Cardio["get"] = (...a) => this.cardio.get(...a);
+  findCardio: Cardio["find"] = (...a) => this.cardio.find(...a);
+  removeCardio: Cardio["remove"] = (...a) => this.cardio.remove(...a);
+  listSports: Cardio["sports"] = () => this.cardio.sports();
+
+  // --- Progress charts (see Charts) ---
+  getExerciseHistory: Charts["exerciseHistory"] = (...a) => this.charts.exerciseHistory(...a);
+  getActivity: Charts["activity"] = () => this.charts.activity();
 
   // --- Objectives (see Objectives) ---
   addObjective: Objectives["add"] = (...a) => this.objectives.add(...a);
@@ -152,16 +184,21 @@ export class Repo {
     return row && toProgram(row);
   }
 
-  async addSession(programId: number, s: { name: string; slot: number }): Promise<number> {
+  /** Adds a Session to a Program. A cardio Session has no Exercises: its name defaults to its sport, then to "Cardio". */
+  async addSession(programId: number, s: { name?: string; slot: number; type?: SessionType; sport?: string }): Promise<number> {
+    const type = s.type ?? "strength";
     const program = await first<ProgramRow>(this.db, "SELECT * FROM program WHERE id = ?", [programId]);
     if (!program) throw new Error("Programme introuvable.");
     if (!isValidSlot(program.cycle, s.slot)) throw new Error("Ce jour n'existe pas dans ce cycle.");
-    const name = s.name.trim();
+    const sport = type === "cardio" ? s.sport?.trim() || null : null;
+    const name = (s.name ?? "").trim() || (type === "cardio" ? sport ?? "Cardio" : "");
     if (!name) throw new Error("La séance a besoin d'un nom.");
-    const r = await this.db.run("INSERT INTO program_session (program_id, name, slot) VALUES (?, ?, ?)", [
+    const r = await this.db.run("INSERT INTO program_session (program_id, name, slot, type, sport) VALUES (?, ?, ?, ?, ?)", [
       programId,
       name,
       s.slot,
+      type,
+      sport,
     ]);
     return r.lastInsertRowId;
   }
@@ -176,6 +213,8 @@ export class Repo {
     e: ({ exerciseId: number } | { name: string; equipment?: string }) & { sets: number; goal: TrainingGoal },
   ): Promise<number> {
     if (!Number.isInteger(e.sets) || e.sets < 1) throw new Error("Il faut au moins une série.");
+    const kind = await first<{ type: SessionType }>(this.db, "SELECT type FROM program_session WHERE id = ?", [sessionId]);
+    if (kind?.type === "cardio") throw new Error("Une séance de cardio n'a pas d'exercices.");
     let exerciseId: number;
     if ("exerciseId" in e) {
       exerciseId = e.exerciseId;
@@ -241,7 +280,7 @@ export class Repo {
   async getProgramDetail(programId: number): Promise<ProgramDetail> {
     const row = await first<ProgramRow>(this.db, "SELECT * FROM program WHERE id = ?", [programId]);
     if (!row) throw new Error("Programme introuvable.");
-    const sessions = await this.db.all<{ id: number; program_id: number; name: string; slot: number }>(
+    const sessions = await this.db.all<{ id: number; program_id: number; name: string; slot: number; type: SessionType; sport: string | null }>(
       "SELECT * FROM program_session WHERE program_id = ? AND test_date IS NULL ORDER BY slot, id",
       [programId],
     );
@@ -253,6 +292,8 @@ export class Repo {
           programId: s.program_id,
           name: s.name,
           slot: s.slot,
+          type: s.type,
+          sport: s.sport,
           exercises: await this.getSessionExercises(s.id),
         })),
       ),
@@ -321,8 +362,8 @@ export class Repo {
 
     const program = await this.getActiveProgram();
     if (program) {
-      const sessions = await this.db.all<{ id: number; name: string; slot: number; test_date: IsoDate | null; exercises: number; sets: number | null }>(
-        `SELECT ps.id, ps.name, ps.slot, ps.test_date, COUNT(se.id) AS exercises, SUM(se.sets) AS sets
+      const sessions = await this.db.all<{ id: number; name: string; slot: number; type: SessionType; sport: string | null; test_date: IsoDate | null; exercises: number; sets: number | null }>(
+        `SELECT ps.id, ps.name, ps.slot, ps.type, ps.sport, ps.test_date, COUNT(se.id) AS exercises, SUM(se.sets) AS sets
            FROM program_session ps LEFT JOIN session_exercise se ON se.program_session_id = ps.id
           WHERE ps.program_id = ? GROUP BY ps.id ORDER BY ps.slot, ps.id`,
         [program.id],
@@ -345,7 +386,7 @@ export class Repo {
         done.has(`${sessionId}|${date}`) ? "done" : blocked.has(date) ? "skipped" : date < today ? "missed" : base;
 
       for (const s of sessions) {
-        const common = { type: "planned" as const, sessionId: s.id, name: s.name, exerciseCount: s.exercises, setCount: s.sets ?? 0 };
+        const common = { type: "planned" as const, sessionId: s.id, name: s.name, sessionType: s.type, sport: s.sport, exerciseCount: s.exercises, setCount: s.sets ?? 0 };
         // A Test Session is one-off: only its own date.
         const dates = s.test_date ? (s.test_date >= from && s.test_date <= to ? [s.test_date] : []) : datesForSlot(program.cycle, program.startDate, s.slot, from, to);
         for (const date of dates) {
@@ -363,6 +404,8 @@ export class Repo {
           type: "planned",
           sessionId: s.id,
           name: s.name,
+          sessionType: s.type,
+          sport: s.sport,
           exerciseCount: s.exercises,
           setCount: s.sets ?? 0,
           status: statusOn(s.id, o.moved_to, "planned"),
@@ -372,6 +415,12 @@ export class Repo {
       }
     }
 
+    const unplannedCardio = await this.db.all<{ log_id: number; date: IsoDate; sport: string; duration_min: number; rpe: number }>(
+      `SELECT sl.id AS log_id, sl.date, c.sport, c.duration_min, c.rpe FROM cardio_log c JOIN session_log sl ON sl.id = c.session_log_id
+        WHERE sl.program_session_id IS NULL AND sl.date BETWEEN ? AND ? ORDER BY sl.id`,
+      [from, to],
+    );
+    for (const c of unplannedCardio) days.get(c.date)!.push({ type: "cardio", logId: c.log_id, sport: c.sport, durationMin: c.duration_min, rpe: c.rpe });
     for (const e of entries) days.get(e.date)!.push({ type: e.kind, id: e.id, label: e.label });
     return [...days].map(([date, items]) => ({ date, items }));
   }

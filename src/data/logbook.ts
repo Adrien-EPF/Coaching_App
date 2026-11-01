@@ -122,8 +122,9 @@ export class Logbook {
     ]);
     if (existing) return existing.id;
 
-    const session = await first<{ name: string }>(this.db, "SELECT name FROM program_session WHERE id = ?", [programSessionId]);
+    const session = await first<{ name: string; type: string }>(this.db, "SELECT name, type FROM program_session WHERE id = ?", [programSessionId]);
     if (!session) throw new Error("Séance introuvable.");
+    if (session.type !== "strength") throw new Error("Une séance de cardio se saisit en une fois, sans séries.");
     const plan = await this.getPlan(programSessionId);
     const exercises = await this.repo.getSessionExercises(programSessionId);
 
@@ -375,7 +376,7 @@ export class Logbook {
     const days = await this.repo.getCalendar(addDays(after, 1), addDays(after, 60), today);
     for (const day of days) {
       for (const item of day.items) {
-        if (item.type === "planned" && item.status === "planned") return this.planSessionOn(item.sessionId, day.date);
+        if (item.type === "planned" && item.sessionType === "strength" && item.status === "planned") return this.planSessionOn(item.sessionId, day.date);
       }
     }
     return null;
