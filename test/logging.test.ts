@@ -192,6 +192,28 @@ describe("last Session's numbers", () => {
     const second = await repo.getSessionLog(await repo.startSession(monSession, NEXT_MON));
     expect(exerciseNamed(second, "Squat").sets[0].last).toBeNull();
   });
+
+  it("only compares with a previous Session done with the same Training Goal", async () => {
+    // The same Exercise, trained for strength on Mondays and for hypertrophy on Thursdays.
+    const squatId = exerciseNamed(await repo.getSessionLog(await repo.startSession(monSession, MON)), "Squat").exerciseId;
+    await repo.addExercise(thuSession, { exerciseId: squatId, sets: 2, goal: "hypertrophy" });
+
+    const strength = await repo.startSession(monSession, MON);
+    for (const s of exerciseNamed(await repo.getSessionLog(strength), "Squat").sets) await repo.logSet(s.id, { weight: 140, reps: 3, rpe: 8 });
+    await repo.setExerciseNotCompleted(strength, exerciseNamed(await repo.getSessionLog(strength), "Curl").exerciseId, true);
+    await repo.validateSession(strength, TODAY);
+
+    const hypertrophy = await repo.startSession(thuSession, "2026-10-08");
+    expect(exerciseNamed(await repo.getSessionLog(hypertrophy), "Squat").sets[0].last).toBeNull();
+    for (const s of exerciseNamed(await repo.getSessionLog(hypertrophy), "Squat").sets) await repo.logSet(s.id, { weight: 100, reps: 10, rpe: 8 });
+    await repo.setExerciseNotCompleted(hypertrophy, exerciseNamed(await repo.getSessionLog(hypertrophy), "Bench").exerciseId, true);
+    await repo.validateSession(hypertrophy, "2026-10-08");
+
+    const nextHypertrophy = await repo.getSessionLog(await repo.startSession(thuSession, "2026-10-15"));
+    expect(exerciseNamed(nextHypertrophy, "Squat").sets[0].last).toEqual({ weight: 100, reps: 10, rpe: 8 });
+    const nextStrength = await repo.getSessionLog(await repo.startSession(monSession, NEXT_MON));
+    expect(exerciseNamed(nextStrength, "Squat").sets[0].last).toEqual({ weight: 140, reps: 3, rpe: 8 });
+  });
 });
 
 describe("planning the next Session on Validation", () => {
