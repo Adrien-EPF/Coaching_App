@@ -293,13 +293,16 @@ Gemini needed three fixes: a current model (Google now keeps the 2.5 models for 
 
 Volume and frequency objectives, rest timer, bodyweight tracking, automatic evening-before planning, cloud sync and accounts, iOS.
 
-### Planned v2
+### v2: cardio
 
-Tracked in the [issues](https://github.com/Adrien-EPF/Coaching_App/issues) ([#24](https://github.com/Adrien-EPF/Coaching_App/issues/24) for cardio).
+Tracked in the [issues](https://github.com/Adrien-EPF/Coaching_App/issues) ([#24](https://github.com/Adrien-EPF/Coaching_App/issues/24)).
 
-- **Cardio sessions.** Each Session has a type, strength or cardio, chosen when it is added to a Program, and one Program can mix both. A cardio Session logs any sport (running, cycling, swimming, tennis, boxing, volleyball...) with its duration and RPE, so you see your whole sporting week in the calendar, in its own color. It can be planned or logged as an Unplanned Session. Nothing is recommended or tracked for progression: cardio has no Rules and Gemini does not use it. Sessions that already exist stay strength Sessions.
+- **Cardio sessions.** Each Session has a type, strength or cardio, chosen when it is added to a Program, and one Program can mix both. A cardio Session logs any sport with its duration and RPE (and optionally a note, distance and average heart rate), so you see your whole sporting week in the calendar, in its own color. It can be planned in the Program ("Tuesday: tennis"), missed like any Session, or logged as an Unplanned Session. Nothing is recommended or tracked for progression: cardio has no Rules and Gemini does not use it. Validating a strength Session still plans the next strength Session, never a cardio one. Sessions that already exist stay strength Sessions.
+- **Running and cycling are sports of the cardio type**, not disciplines of their own: no target time, planned runs or Rules specific to them.
+
+### Planned next
+
 - **Progress charts.** An Estimated 1RM curve per Exercise, and a global header with weekly volume and Sessions per week.
-- **Running as its own tracked discipline** (target time, planned runs, its own Rules) was considered and dropped for now: running is only a sport you can log under cardio.
 
 <br>
 

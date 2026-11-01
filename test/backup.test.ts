@@ -74,8 +74,8 @@ describe("JSON export and import", () => {
 describe("CSV export", () => {
   it("has one row per Set, with quoted fields", async () => {
     const lines = (await exportCsv(db)).trim().split("\n");
-    expect(lines[0]).toBe("date,session,status,exercise,goal,set,planned_weight,planned_reps,weight,reps,rpe,not_completed");
+    expect(lines[0]).toBe("date,session,status,exercise,goal,set,planned_weight,planned_reps,weight,reps,rpe,not_completed,type,duration_min,distance_km,avg_hr");
     expect(lines).toHaveLength(3);
-    expect(lines[1]).toBe(`2026-10-05,"Day, ""A""",validated,Squat,strength,1,,,100,5,8,0`);
+    expect(lines[1]).toBe(`2026-10-05,"Day, ""A""",validated,Squat,strength,1,,,100,5,8,0,strength,,,`);
   });
 });

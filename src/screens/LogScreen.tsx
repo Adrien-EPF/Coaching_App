@@ -343,14 +343,14 @@ function SetRow({
 }
 
 /** Nearest meaning in the Rules' RPE scale at or below the value. */
-function rpeMeaning(rpe: number): string {
+export function rpeMeaning(rpe: number): string {
   const keys = Object.keys(DEFAULT_RULES.rpe_scale).map(Number).sort((a, b) => b - a);
   const key = keys.find((k) => k <= rpe) ?? keys[keys.length - 1];
   return DEFAULT_RULES.rpe_scale[String(key)];
 }
 
 /** The scale offered in the picker; the lowest step stands for "6 or less". */
-const RPE_STEPS = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
+export const RPE_STEPS = [6, 7, 7.5, 8, 8.5, 9, 9.5, 10];
 
 const stepNumber = (text: string, delta: number) => {
   const n = parseNumber(text);

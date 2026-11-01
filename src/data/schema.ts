@@ -140,13 +140,32 @@ const MIGRATIONS: string[] = [
     estimated_at TEXT NOT NULL
   );
   `,
+  `
+  -- What kind of Session it is: an open value ('strength', 'cardio'...), strength for everything that existed before.
+  ALTER TABLE program_session ADD COLUMN type TEXT NOT NULL DEFAULT 'strength';
+  -- The sport planned in the Program for a cardio Session (optional).
+  ALTER TABLE program_session ADD COLUMN sport TEXT;
+  ALTER TABLE session_log ADD COLUMN type TEXT NOT NULL DEFAULT 'strength';
+
+  -- What was done in a cardio session_log: nothing here is analysed, only shown.
+  CREATE TABLE cardio_log (
+    session_log_id INTEGER PRIMARY KEY REFERENCES session_log(id) ON DELETE CASCADE,
+    sport TEXT NOT NULL,
+    duration_min REAL NOT NULL CHECK (duration_min > 0),
+    rpe REAL NOT NULL CHECK (rpe >= 1 AND rpe <= 10),
+    note TEXT,
+    distance_km REAL,
+    avg_hr INTEGER
+  );
+  `,
 ];
 
-export async function migrate(db: Db): Promise<void> {
+/** Runs the migrations not yet applied, up to `upTo` (all by default). */
+export async function migrate(db: Db, upTo = MIGRATIONS.length): Promise<void> {
   await db.exec("PRAGMA foreign_keys = ON;");
   const row = await first<{ user_version: number }>(db, "PRAGMA user_version");
   const current = row?.user_version ?? 0;
-  for (let v = current; v < MIGRATIONS.length; v++) {
+  for (let v = current; v < upTo; v++) {
     await db.exec(MIGRATIONS[v]);
     await db.exec(`PRAGMA user_version = ${v + 1};`);
   }

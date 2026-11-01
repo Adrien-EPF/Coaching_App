@@ -1,14 +1,14 @@
 import React, { useState } from "react";
 import { Pressable, View } from "react-native";
 import { useAction, useQuery, useStore } from "../data/RepoContext";
-import { ProgramDetail, SessionExercise, TrainingGoal } from "../data/repo";
+import { ProgramDetail, SessionExercise, SessionType, TrainingGoal } from "../data/repo";
 import { CYCLE_LABELS, CycleKind, slotCount, slotLabel } from "../domain/cycle";
 import { todayIso } from "../domain/dates";
 import { formatFr, maskFr, parseFr, plural, shortDate } from "../domain/format";
 import { StartingSheet } from "./StartingSheet";
 import { DEFAULT_RULES } from "../rules/rules";
 import { Icon } from "../ui/icons";
-import { Button, Card, Chip, ErrorText, Field, GoalBadge, Row, Screen, SectionLabel, Sheet, Txt } from "../ui/kit";
+import { Button, Card, Chip, ErrorText, Field, CardioBadge, GoalBadge, Row, Screen, SectionLabel, Sheet, Txt } from "../ui/kit";
 import { radius, size, space, useColors } from "../ui/theme";
 
 export const GOAL_LABELS: Record<TrainingGoal, string> = {
@@ -152,12 +152,12 @@ function WeekStrip({ sessions }: { sessions: ProgramDetail["sessions"] }) {
                 borderRadius: radius.sm,
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: s ? c.surfaceRaised : c.surfaceSunken,
+                backgroundColor: s ? (s.type === "cardio" ? c.cardio : c.surfaceRaised) : c.surfaceSunken,
                 borderWidth: s ? 1.5 : 0,
-                borderColor: c.lineStrong,
+                borderColor: s?.type === "cardio" ? c.cardio : c.lineStrong,
               }}
             >
-              <Txt kind="heading" muted={!s}>{s ? s.name.trim().split(/\s+/).pop()!.slice(0, 1).toUpperCase() : "·"}</Txt>
+              <Txt kind="heading" muted={!s} style={s?.type === "cardio" ? { color: c.onCardio } : undefined}>{s ? s.name.trim().split(/\s+/).pop()!.slice(0, 1).toUpperCase() : "·"}</Txt>
             </View>
           </View>
         );
@@ -181,6 +181,18 @@ function SessionDetail({
   const act = useAction();
   const { repo } = useStore();
   const sets = session.exercises.reduce((n, e) => n + e.sets, 0);
+  if (session.type === "cardio") {
+    return (
+      <View style={{ gap: space[3] }}>
+        <CardioBadge />
+        <Txt muted>
+          {slotLabel(cycle, session.slot)} · {session.sport ?? "sport au choix"}
+        </Txt>
+        <Txt kind="caption" muted>Une séance de cardio n'a ni exercices ni séries, et rien n'est recommandé : tu la saisis une fois faite.</Txt>
+        <Button label="Supprimer la séance" kind="ghost" small onPress={() => act(() => repo.removeSession(session.id))} />
+      </View>
+    );
+  }
   return (
     <View style={{ gap: space[3] }}>
       <Txt muted>
@@ -277,17 +289,22 @@ function SessionSheet({
 }) {
   const act = useAction();
   const { repo } = useStore();
+  const [type, setType] = useState<SessionType>("strength");
   const [name, setName] = useState("");
+  const [sport, setSport] = useState("");
   const [slot, setSlot] = useState<number | null>(null);
   const [dayText, setDayText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const sports = useQuery((r) => r.listSports()) ?? [];
 
   const submit = async () => {
     const chosen = cycle === "month" ? Number(dayText) : slot;
     if (chosen === null || Number.isNaN(chosen)) return setError("Choisis le jour de la séance.");
-    const ok = await act(() => repo.addSession(program, { name, slot: chosen }), setError);
+    const ok = await act(() => repo.addSession(program, type === "cardio" ? { type, sport, slot: chosen } : { name, slot: chosen }), setError);
     if (ok) {
+      setType("strength");
       setName("");
+      setSport("");
       setSlot(null);
       setDayText("");
       setError(null);
@@ -297,7 +314,26 @@ function SessionSheet({
 
   return (
     <Sheet visible={visible} title="Nouvelle séance" onClose={onClose}>
-      <Field label="Nom" value={name} onChangeText={setName} placeholder="Séance A" />
+      <View style={{ gap: space[1] }}>
+        <Txt kind="caps" muted>Type</Txt>
+        <Row>
+          <Chip label="Musculation" selected={type === "strength"} onPress={() => setType("strength")} />
+          <Chip label="Cardio" selected={type === "cardio"} onPress={() => setType("cardio")} />
+        </Row>
+      </View>
+      {type === "strength" ? (
+        <Field label="Nom" value={name} onChangeText={setName} placeholder="Séance A" />
+      ) : (
+        <View style={{ gap: space[1] }}>
+          <Txt kind="caps" muted>Sport (facultatif)</Txt>
+          <Row>
+            {sports.map((s) => (
+              <Chip key={s} label={s} selected={sport.trim().toLowerCase() === s.toLowerCase()} onPress={() => setSport(sport.trim().toLowerCase() === s.toLowerCase() ? "" : s)} />
+            ))}
+          </Row>
+          <Field label="Ou un autre sport" value={sport} onChangeText={setSport} placeholder="Tennis" />
+        </View>
+      )}
       <View style={{ gap: space[1] }}>
         <Txt kind="caps" muted>Jour</Txt>
         {cycle === "month" ? (

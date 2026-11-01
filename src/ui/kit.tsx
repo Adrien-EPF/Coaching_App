@@ -382,6 +382,24 @@ export function StatusBadge({ state, label }: { state: SessionState; label?: str
   );
 }
 
+/** Marks a cardio Session: its color always comes with its label. */
+export function CardioBadge({ label = "Cardio" }: { label?: string }) {
+  const c = useColors();
+  return (
+    <View
+      style={{
+        alignSelf: "flex-start",
+        backgroundColor: c.cardio,
+        borderRadius: radius.sm,
+        paddingHorizontal: space[2],
+        paddingVertical: 2,
+      }}
+    >
+      <Txt kind="caps" style={{ color: c.onCardio }}>{label}</Txt>
+    </View>
+  );
+}
+
 export function Field({ label, style, big, ...rest }: TextInputProps & { label: string; big?: boolean }) {
   const c = useColors();
   return (
