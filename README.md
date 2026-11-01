@@ -53,7 +53,7 @@ Coaching App is built for one lifter, in the gym, often without signal:
 | **5** | **The plan** | Gemini receives the last 6 sessions per exercise, your Rules, your Objectives and any Problem Report, and returns structured JSON. Every value is clamped by the Guardrails. If Gemini is unreachable, a rules-only plan is used. |
 | **6** | **Explanations** | A short "why this weight" appears only when the weight changes from last time, plus one line for the whole session. |
 | **7** | **Calendar** | You can skip, move or add unplanned sessions, and mark rest days and injuries. Missed sessions do not shift the program. A Problem Report (e.g. bad sleep) on an upcoming session re-plans it. |
-| **8** | **Dashboard** | PRs at each rep count, Estimated 1RM (Epley, on the lifted weight only, never bodyweight), Objectives (a target PR with a date), and adherence. Trend charts come right after v1. |
+| **8** | **Dashboard** | PRs at each rep count, Estimated 1RM (Epley, on the lifted weight only, never bodyweight), Objectives (a target PR with a date), and adherence. Progress charts are planned for v2. |
 
 ```mermaid
 flowchart LR
@@ -291,11 +291,15 @@ Gemini needed three fixes: a current model (Google now keeps the 2.5 models for 
 
 ### Out of scope for v1 (ideas for v2)
 
-Trend charts, volume and frequency objectives, rest timer, bodyweight tracking, automatic evening-before planning, cloud sync and accounts, iOS.
+Volume and frequency objectives, rest timer, bodyweight tracking, automatic evening-before planning, cloud sync and accounts, iOS.
 
-### Possible v2: running
+### Planned v2
 
-If there is a v2, it adds **running** next to lifting, with its own set of Rules, the way lifting has [RULES.md](./RULES.md). Running would not reuse the double progression on load: it needs its own Training Goals, its own progression model (distance, pace, volume per week), its own brakes and its own Guardrails, still applied after Gemini. The planning engine, the Guardrail principle and the rules-only fallback would stay the same.
+Tracked in the [issues](https://github.com/Adrien-EPF/Coaching_App/issues) ([#24](https://github.com/Adrien-EPF/Coaching_App/issues/24) for cardio).
+
+- **Cardio sessions.** Each Session has a type, strength or cardio, chosen when it is added to a Program, and one Program can mix both. A cardio Session logs any sport (running, cycling, swimming, tennis, boxing, volleyball...) with its duration and RPE, so you see your whole sporting week in the calendar, in its own color. It can be planned or logged as an Unplanned Session. Nothing is recommended or tracked for progression: cardio has no Rules and Gemini does not use it. Sessions that already exist stay strength Sessions.
+- **Progress charts.** An Estimated 1RM curve per Exercise, and a global header with weekly volume and Sessions per week.
+- **Running as its own tracked discipline** (target time, planned runs, its own Rules) was considered and dropped for now: running is only a sport you can log under cardio.
 
 <br>
 
