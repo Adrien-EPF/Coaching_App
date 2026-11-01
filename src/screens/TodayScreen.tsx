@@ -8,7 +8,7 @@ import { longDate, plural } from "../domain/format";
 import type { RootParams } from "../navigation";
 import { TIMED } from "../rules/rules";
 import { Icon } from "../ui/icons";
-import { Button, Card, ErrorText, GoalBadge, IconButton, ListCard, RecommendationNote, Screen, Slab, StatusBadge, Txt } from "../ui/kit";
+import { Button, CardioBadge, Card, ErrorText, GoalBadge, IconButton, ListCard, RecommendationNote, Screen, Slab, StatusBadge, Txt } from "../ui/kit";
 import { size, space, useColors } from "../ui/theme";
 import { GOAL_LABELS } from "./ProgramScreen";
 import { ProblemSheet } from "./ProblemSheet";
@@ -24,7 +24,7 @@ export function TodayScreen() {
   const plan = useQuery(async (repo) => {
     const days = await repo.getCalendar(today, addDays(today, 31), today);
     for (const day of days) {
-      const item = day.items.find((i) => i.type === "planned" && i.status === "planned");
+      const item = day.items.find((i) => i.type === "planned" && i.sessionType === "strength" && i.status === "planned");
       if (item && item.type === "planned") {
         return {
           date: day.date,
@@ -37,7 +37,9 @@ export function TodayScreen() {
     }
     return null;
   }, [today]);
-  const rest = useQuery(async (repo) => (await repo.getCalendar(today, today, today))[0].items.find((i) => i.type !== "planned"));
+  const rest = useQuery(async (repo) => (await repo.getCalendar(today, today, today))[0].items.find((i) => i.type === "rest" || i.type === "injury"));
+  // Cardio Sessions have no plan: today's are just listed, to be entered once done.
+  const cardio = useQuery(async (repo) => (await repo.getCalendar(today, today, today))[0].items.filter((i) => i.type === "cardio" || (i.type === "planned" && i.sessionType === "cardio")));
 
   const program = useQuery((r) => r.getActiveProgram());
   const c = useColors();
@@ -129,7 +131,29 @@ export function TodayScreen() {
           />
         </>
       )}
-      {rest && rest.type !== "unplanned" && (
+      {cardio?.map((item, i) => (
+        <Card key={i}>
+          <CardioBadge />
+          {item.type === "cardio" ? (
+            <>
+              <Txt kind="strong">Aujourd'hui : {item.sport}, {item.durationMin} min</Txt>
+              <Button label="Voir ou corriger" kind="secondary" small onPress={() => navigation.navigate("Cardio", { date: today, logId: item.logId })} />
+            </>
+          ) : item.type === "planned" ? (
+            <>
+              <Txt kind="strong">Aujourd'hui : {item.sport ?? item.name}</Txt>
+              <Button
+                label={item.status === "done" ? "Voir ou corriger" : "Saisir"}
+                kind="secondary"
+                small
+                disabled={item.status === "skipped" || item.status === "moved"}
+                onPress={() => navigation.navigate("Cardio", { date: today, programSessionId: item.sessionId })}
+              />
+            </>
+          ) : null}
+        </Card>
+      ))}
+      {rest && (rest.type === "rest" || rest.type === "injury") && (
         <Card>
           <Txt kind="strong">{rest.type === "rest" ? "Aujourd'hui : repos" : "Aujourd'hui : blessure"}</Txt>
           {rest.label ? <Txt muted>{rest.label}</Txt> : null}

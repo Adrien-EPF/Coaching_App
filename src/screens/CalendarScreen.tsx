@@ -7,7 +7,7 @@ import { CalendarDay, CalendarItem } from "../data/repo";
 import { addDays, daysInMonth, IsoDate, mondayOf, todayIso, toIso, weekday } from "../domain/dates";
 import { formatFr, longDate, maskFr, MONTHS, parseFr, plural } from "../domain/format";
 import { Icon, IconName } from "../ui/icons";
-import { Button, Card, Chip, ErrorText, Field, IconButton, Row, Screen, SessionState, Sheet, Split, StatusBadge, Txt } from "../ui/kit";
+import { Button, CardioBadge, Card, Chip, ErrorText, Field, IconButton, Row, Screen, SessionState, Sheet, Split, StatusBadge, Txt } from "../ui/kit";
 import { fonts, radius, space, useColors } from "../ui/theme";
 
 type Planned = Extract<CalendarItem, { type: "planned" }>;
@@ -95,6 +95,7 @@ export function CalendarScreen() {
         <StatusBadge state="planned" />
         <StatusBadge state="missed" />
         <StatusBadge state="unplanned" />
+        <CardioBadge />
       </View>
 
       <DayDetail date={selected} day={byDate.get(selected)} today={today} />
@@ -110,9 +111,15 @@ function Mark({ item, isToday }: { item: CalendarItem; isToday: boolean }) {
   let border = c.lineStrong;
   let glyph: IconName | null = null;
   let letter = "+";
-  if (item.type === "planned") {
+  if (item.type === "cardio") {
+    ({ bg, fg, border, glyph, letter } = { bg: c.cardio, fg: c.onCardio, border: c.cardio, glyph: "check", letter: initialOf(item.sport) });
+  } else if (item.type === "planned") {
     letter = initialOf(item.name);
-    if (item.status === "done") ({ bg, fg, border, glyph } = { bg: c.limeSoft, fg: c.limeInk, border: c.limeSoft, glyph: "check" });
+    if (item.sessionType === "cardio" && item.status !== "missed" && item.status !== "done") {
+      ({ bg, fg, border } = { bg: "transparent", fg: c.cardioInk, border: c.cardio });
+    } else if (item.sessionType === "cardio" && item.status === "done") {
+      ({ bg, fg, border, glyph } = { bg: c.cardio, fg: c.onCardio, border: c.cardio, glyph: "check" });
+    } else if (item.status === "done") ({ bg, fg, border, glyph } = { bg: c.limeSoft, fg: c.limeInk, border: c.limeSoft, glyph: "check" });
     else if (item.status === "missed") ({ bg, fg, border, glyph } = { bg: c.danger, fg: c.onDanger, border: c.danger, glyph: "cross" });
     else if (item.status === "planned" && isToday) ({ bg, fg, border } = { bg: c.lime, fg: c.onLime, border: c.lime });
     else if (item.status === "planned") ({ bg, fg, border } = { bg: "transparent", fg: c.ink, border: c.lineStrong });
@@ -196,6 +203,7 @@ function DayDetail({ date, day, today }: { date: IsoDate; day?: CalendarDay; tod
   const [unplanned, setUnplanned] = useState(false);
   const [rest, setRest] = useState(false);
   const items = day?.items ?? [];
+  const navigation = useNavigation<NavigationProp<RootParams>>();
 
   return (
     <View style={{ gap: space[3] }}>
@@ -210,8 +218,9 @@ function DayDetail({ date, day, today }: { date: IsoDate; day?: CalendarDay; tod
       ))}
       <Split>
         <Button label="Hors programme" kind="secondary" icon="plus" small onPress={() => setUnplanned(true)} />
-        <Button label="Repos ou blessure" kind="secondary" small onPress={() => setRest(true)} />
+        <Button label="Cardio" kind="secondary" icon="plus" small onPress={() => navigation.navigate("Cardio", { date })} />
       </Split>
+      <Button label="Repos ou blessure" kind="secondary" small onPress={() => setRest(true)} />
       <MoveSheet item={moving} date={date} today={today} onClose={() => setMoving(null)} />
       <UnplannedSheet visible={unplanned} date={date} onClose={() => setUnplanned(false)} />
       <RestSheet visible={rest} date={date} onClose={() => setRest(false)} />
@@ -223,6 +232,20 @@ function ItemCard({ item, date, today, onMove }: { item: CalendarItem; date: Iso
   const act = useAction();
   const { repo } = useStore();
   const navigation = useNavigation<NavigationProp<RootParams>>();
+
+  if (item.type === "cardio") {
+    return (
+      <Card style={{ gap: space[3] }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Txt kind="caps" muted>{longDate(date)}</Txt>
+          <CardioBadge />
+        </View>
+        <Txt kind="titleLg">{item.sport}</Txt>
+        <Txt muted>{item.durationMin} min · RPE {String(item.rpe).replace(".", ",")}</Txt>
+        <Button label="Voir ou corriger" kind="secondary" onPress={() => navigation.navigate("Cardio", { date, logId: item.logId })} />
+      </Card>
+    );
+  }
 
   if (item.type !== "planned") {
     const title = item.type === "rest" ? "Repos" : item.type === "injury" ? "Blessure" : "Séance hors programme";
@@ -239,7 +262,9 @@ function ItemCard({ item, date, today, onMove }: { item: CalendarItem; date: Iso
     );
   }
 
-  const openLog = (programSessionId: number, on: IsoDate) => navigation.navigate("Log", { programSessionId, date: on });
+  const cardio = item.sessionType === "cardio";
+  const open = (programSessionId: number, on: IsoDate) =>
+    cardio ? navigation.navigate("Cardio", { programSessionId, date: on }) : navigation.navigate("Log", { programSessionId, date: on });
   const movedIn = item.movedFrom !== undefined;
   const reset = () => act(() => repo.clearOccurrence(item.sessionId, item.plannedDate));
   const state: SessionState = item.status === "planned" && date === today ? "today" : STATUS_STATE[item.status];
@@ -251,13 +276,19 @@ function ItemCard({ item, date, today, onMove }: { item: CalendarItem; date: Iso
         <Txt kind="caps" muted>{longDate(date)}</Txt>
         <StatusBadge state={state} label={item.status === "skipped" ? "Passée" : item.status === "moved" ? "Déplacée" : undefined} />
       </View>
+      {cardio ? <CardioBadge /> : null}
       <Txt kind="titleLg">{item.name}</Txt>
-      <Txt muted>
-        {plural(item.exerciseCount, "exercice", "exercices")} · {plural(item.setCount, "série", "séries")}
-      </Txt>
+      {cardio ? (
+        <Txt muted>{item.sport && item.sport !== item.name ? item.sport : "Cardio"}</Txt>
+      ) : (
+        <Txt muted>
+          {plural(item.exerciseCount, "exercice", "exercices")} · {plural(item.setCount, "série", "séries")}
+        </Txt>
+      )}
       {detail ? <Txt kind="caption" muted>{detail}</Txt> : null}
-      {item.status === "planned" && date <= today ? <Button large label="Commencer" onPress={() => openLog(item.sessionId, date)} /> : null}
-      {item.status === "done" && <Button label="Voir la séance" kind="secondary" onPress={() => openLog(item.sessionId, date)} />}
+      {item.status === "planned" && date <= today ? <Button large label={cardio ? "Saisir" : "Commencer"} onPress={() => open(item.sessionId, date)} /> : null}
+      {item.status === "missed" && cardio ? <Button label="Saisir quand même" kind="secondary" onPress={() => open(item.sessionId, date)} /> : null}
+      {item.status === "done" && <Button label={cardio ? "Voir ou corriger" : "Voir la séance"} kind="secondary" onPress={() => open(item.sessionId, date)} />}
       {item.status === "planned" || item.status === "missed" ? (
         <Split>
           {!movedIn ? <Button label="Déplacer" kind="secondary" small onPress={() => onMove(item)} /> : <View />}
